@@ -80,115 +80,139 @@ function column(text: TextNode[], x: number) {
     .sort((a, b) => a.y - b.y);
 }
 
-function parseBankStatementTotal(text: TextNode[], header: TextNode) {
-  const top = text[text.indexOf(header) + 1];
-
-  if (!/There (was|were) \d/.test(top.value))
-    return null;
-
-  const wrap = column(text, top.x).filter(t => t.y > top.y);
-
-  let total = 0;
-
-  for (const line of wrap) {
-    const match = /(\$[,\d]+\.\d\d)\.$/.exec(line.value);
-
-    if (match) {
-      total += Money.load(match[1]).cents;
-      const next = wrap[wrap.indexOf(line) + 1];
-      if (!next || next.y - line.y > 1) {
-        break;
-      }
-    }
-  }
-
-  return total;
-}
-
 interface ParseContext {
   transactions: Transaction[];
 }
 
 function parseBankStatement(context: ParseContext, document: Root, year: number) {
-  const totals = {
-    'Banking/Check Card Withdrawals and Purchases': null as null | number,
-    'Online and Electronic Banking Deductions': null as null | number,
-    'Deposits and Other Additions': null as null | number,
-  };
+  const pages: TextNode[][] = document.Pages.map(p => p.Texts.map(t => ({ ...t, value: decodeURIComponent(t.R[0].T) })));
 
+  const headerPage = pages.find(p => p.some(t => t.value == 'Balance Summary'));
+  const header = headerPage!.findIndex(t => t.value == 'Balance Summary');
+  assert(header != -1, 'bank statement header');
+
+  function parseDefault(text: TextNode[], sign: number) {
+    return (entry: TextNode[]): Transaction => {
+      const match = /(\d\d)\/(\d\d)/.exec(entry[0].value);
+      assert(match != null, 'default parse');
+
+      const month = parseInt(match[1]);
+      const day = parseInt(match[2]);
+
+      const description = entry.slice(2).map(e => e.value).join(' ');
+      const value = Money.load(`$0${entry[1].value}`);
+      value.cents *= sign;
+
+      assert(description.length <= 60, 'description');
+
+      return {
+        date: {
+          day,
+          month,
+          year,
+        },
+        description,
+        value,
+      };
+    }
+  }
+
+  function parseCheck(text: TextNode[]) {
+    return (entry: TextNode[]): Transaction => {
+      const match = /\d{4}/.exec(entry[0].value);
+      assert(match != null, 'check check');
+
+      const matchDate = /(\d\d)\/(\d\d)/.exec(entry[2].value);
+      assert(matchDate != null, 'matchDate');
+
+      const month = parseInt(matchDate[1]);
+      const day = parseInt(matchDate[2]);
+
+      const description = `Check #${entry[0].value}`;
+      const value = Money.load(`$0${entry[1].value}`);
+      value.cents = -value.cents;
+
+      return {
+        date: {
+          day,
+          month,
+          year,
+        },
+        description,
+        value,
+      };
+    }
+  }
+
+  let started = false;
+  let mode: (entry: TextNode[]) => Transaction = n => { assert(false, 'fallback'); }
+  const expected: string[] = [];
   const transactions = [];
-  for (const page of document.Pages) {
-    const text = page.Texts.map(t => ({ ...t, value: decodeURIComponent(t.R[0].T) }));
-    let y = 0;
 
-    while (true) {
-      const h1 = text.find(t => t.y > y && t.value in totals);
-      if (!h1) break;
-      y = h1.y;
+  for (const page of pages) {
+    const start = page.find(t => t.value == 'Activity Detail')
+      ?? (started && page.find(t => t.value == 'Account Number:'));
 
-      const entries = column(text, h1.x).filter(t => t.y > h1.y);
-      assert(entries.shift()?.value == 'Date', `bank statement header`);
+    if (!start) continue;
+    started = true;
 
-      const label = h1.value as keyof typeof totals;
-      const total = parseBankStatementTotal(text, h1);
+    const entries = column(page, start.x).filter(t => t.y > start.y);
 
-      if (typeof totals[label] == 'number') {
-        assert(total == null, `bank statement duplicate total`);
+    for (let i = 0; i < entries.length; ++i) {
+      const node = entries[i];
+      const str = expected.pop();
+      if (str) {
+        assert(str == node.value, `expected ${node.value}`);
+      } else if (node.value == 'Daily Balance Detail' || node.value.includes('continued on next page')) {
+        break;
       } else {
-        assert(total != null, `bank statement missing total`);
-        totals[label] = total;
-      }
+        switch (node.value) {
+          case 'Deposits and Other Additions':
+            mode = parseDefault(page, 1);
+            expected.push('Date');
+            break;
 
-      for (const node of entries) {
-        const match = /(\d\d)\/(\d\d)/.exec(node.value);
-        if (!match) break;
+          case 'Checks and Substitute Checks':
+            mode = parseCheck(page);
+            expected.push('number', 'Check');
+            break;
 
-        const data = row(text, node.y).filter(t => t.x > node.x);
+          case 'Banking/Check Card Withdrawals and Purchases':
+          case 'Banking/Debit Card Withdrawals and Purchases':
+          case 'Online and Electronic Banking Deductions':
+          case 'Other Deductions':
+            mode = parseDefault(page, -1);
+            expected.push('Date');
+            break;
 
-        const month = parseInt(match[1]);
-        const day = parseInt(match[2]);
+          default:
+            const entry = row(page, node.y);
+            const wrap = column(page, entry[entry.length - 1].x)
+              .filter(t => t.y > node.y && (!entries[i + 1] || t.y < entries[i + 1].y))
 
-        const description = data[1].value;
-        const value = Money.load(`$0${data[0].value}`);
+            entry.push(...wrap);
 
-        if (h1.value != 'Deposits and Other Additions') {
-          value.cents = -value.cents;
+            const transaction = mode(entry);
+
+            context.transactions.push(transaction);
+            transactions.push(transaction);
         }
-
-        const t = {
-          date: {
-            day,
-            month,
-            year,
-          },
-          description,
-          value,
-        };
-
-        context.transactions.push(t);
-        transactions.push(t);
       }
     }
   }
 
-  let total = 0;
-  for (const key in totals) {
-    const value = totals[key as keyof typeof totals];
-    if (!value) continue;
-
-    if (key == 'Deposits and Other Additions') {
-      total += value;
-    } else {
-      total -= value;
-    }
-  }
+  const totalPositive = Money.load('$0' + headerPage![header + 10].value);
+  const totalNegative = Money.load('$0' + headerPage![header + 11].value);
+  const total = totalPositive.cents - totalNegative.cents;
 
   const check = transactions.reduce((total, t) => total + t.value.cents, 0);
   assert(total == check, `total check ${total} ${check}`);
+
+  console.log(`  ${transactions.length} transactions`);
 }
 
 function parseCreditCardStatement(context: ParseContext, document: Root, year: number) {
-  const page1 = document.Pages[0].Texts.map(t => ({ x: t.x, y: t.y, value: decodeURIComponent(t.R[0].T) }));
+  const page1 = document.Pages[0].Texts.map(t => ({ ...t, value: decodeURIComponent(t.R[0].T) }));
   const header = page1.findIndex(t => t.value == '+ Purchases');
   assert(header != -1 && page1[header].y == page1[header + 1].y, 'credit card statement header');
 
@@ -196,7 +220,7 @@ function parseCreditCardStatement(context: ParseContext, document: Root, year: n
 
   const transactions = [];
   for (const page of document.Pages) {
-    const text = page.Texts.map(t => ({ x: t.x, y: t.y, value: decodeURIComponent(t.R[0].T) }));
+    const text = page.Texts.map(t => ({ ...t, value: decodeURIComponent(t.R[0].T) }));
 
     const h1a = text.find(t => t.value == 'Transaction');
     const h1b = text.find(t => t.x == h1a?.x && t.value == 'date');
@@ -239,6 +263,8 @@ function parseCreditCardStatement(context: ParseContext, document: Root, year: n
 
   const check = transactions.reduce((total, t) => total + t.value.cents, 0);
   assert(-total.cents == check, `total check ${total.cents} ${check}`);
+
+  console.log(`  ${transactions.length} transactions`);
 }
 
 async function main() {
@@ -255,7 +281,7 @@ async function main() {
     ['185L3i1gzhqwTbKDdgBaoawwQRZjcl1Ir', parseBankStatement],
   ] as const;
 
-  const context = {
+  const context: ParseContext = {
     transactions: [],
   };
 
@@ -265,28 +291,41 @@ async function main() {
     });
 
     for (const file of rsp.data.files!) {
-      const stream = await drive.files.get({
-        fileId: file.id!,
-        alt: 'media',
-        acknowledgeAbuse: true,
-      }, {
-        responseType: 'stream',
-      });
+      let buffer;
+
+      try {
+        buffer = await fs.readFile(`cache/${file.id}`);
+      } catch (e) {
+        const stream = await drive.files.get({
+          fileId: file.id!,
+          alt: 'media',
+          acknowledgeAbuse: true,
+        }, {
+          responseType: 'stream',
+        });
+
+        buffer = await stream2buffer(stream.data);
+        await fs.writeFile(`cache/${file.id}`, buffer);
+      }
 
       console.log(`load ${file.name}`);
-
-      const buffer = await stream2buffer(stream.data);
 
       const match = /Statement_(\w+)_(\d+)_(\d+)\.pdf/.exec(file.name!);
       assert(match != null, 'match');
 
       const year = parseInt(match[3]);
-      // const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(match[1]) + 1;
 
       const document = await parsePDF(buffer);
 
       mode(context, document, year);
     }
+  }
+
+  const descriptions = new Set(context.transactions.map(t => t.description));
+  console.log(context.transactions.length);
+  console.log(descriptions.size);
+  for (const description of descriptions) {
+    console.log(description);
   }
 }
 
