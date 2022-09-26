@@ -1,0 +1,26 @@
+{
+  "name": "web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite --port 8080",
+    "build": "vite build",
+    "preview": "vite preview --port 8082",
+    "typecheck": "tsc --noEmit",
+    "typewatch": "tsc --noEmit --watch"
+  },
+  "dependencies": {
+    "vue": "^3.2.31"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^2.1.0",
+    "@vue/tsconfig": "^0.1.3",
+    "autoprefixer": "^10.4.2",
+    "csstype": "^3.0.10",
+    "ress": "5.0.2",
+    "sass": "^1.49.7",
+    "typescript": "~4.7.4",
+    "vite": "^2.7.13",
+    "vue-tsc": "^0.31.1"
+  }
+}

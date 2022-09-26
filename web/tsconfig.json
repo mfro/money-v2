@@ -1,0 +1,36 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.web.json",
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "../core/src/index.ts",
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "dominion.core": [
+        "../core/src"
+      ],
+      "dominion.core/*": [
+        "../core/src/*"
+      ],
+    },
+    "jsx": "react",
+    "jsxFactory": "tsx",
+    "jsxFragmentFactory": "tsx.fragment",
+    "importsNotUsedAsValues": "remove",
+    "moduleResolution": "node",
+    "preserveValueImports": false,
+    "allowJs": true,
+    "lib": [
+      "ES2019",
+      "DOM",
+      "DOM.Iterable",
+      "ES2021.WeakRef"
+    ],
+  }
+}
