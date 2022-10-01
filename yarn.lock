@@ -81,6 +81,13 @@
   resolved "https://npm.pkg.github.com/download/@mfro/assert/1.0.0/fbb3528415b33a0b5846bf8aba523e5dcc690b20#fbb3528415b33a0b5846bf8aba523e5dcc690b20"
   integrity sha512-EeRsXFVKXvuhpR+MBT+ub5VyTpt7QjuyjHqERCo6gELbOxUO84YI478ca5SdHKHoGuR4uof8giM4xRxi38TlIQ==
 
+"@mfro/sync-vue@^1.0.0":
+  version "1.0.0"
+  resolved "https://npm.pkg.github.com/download/@mfro/sync-vue/1.0.0/be0893d9593a62ac29489db7a751d19ca4b0d2c4#be0893d9593a62ac29489db7a751d19ca4b0d2c4"
+  integrity sha512-44civ4Xl4dyJ4+Y2jTmAt+4OqOEb3lJ1PLC7eflwhQ256EvHBSfz30OPyltPpe4XJfjoDJL5EzNb4O4xsx3rDQ==
+  dependencies:
+    "@mfro/assert" "^1.0.0"
+
 "@mfro/vue-ui@^1.0.9":
   version "1.0.9"
   resolved "https://npm.pkg.github.com/download/@mfro/vue-ui/1.0.9/1e1926eba585f6b540177974c4d8209e311b5999#1e1926eba585f6b540177974c4d8209e311b5999"
@@ -1647,11 +1654,6 @@ ress@3:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/ress/-/ress-3.0.0.tgz#45ec8304b67ea114b0cec733bf2628083f35aa9c"
   integrity sha512-MTPto7t44AawqmSbEmvMKoSMWPnxjaTuHf94s7RjWxuSGFN0o8/b+6yOwkaC50+Vihjsu6ODUEQR397gTMn57w==
-
-ress@5.0.2:
-  version "5.0.2"
-  resolved "https://registry.yarnpkg.com/ress/-/ress-5.0.2.tgz#bfe37c76cd8ca344ab69214bdeb677790a6d8730"
-  integrity sha512-oHBtOWo/Uc8SzQMbQNIKTcgi8wKmAs7IlNlRywmXudbOtF+c27FlOIq7tnwLDVcTywe6JXYo1pDXHO6kABwNYA==
 
 "rollup@>=2.59.0 <2.78.0":
   version "2.77.3"

@@ -11,9 +11,8 @@
   },
   "dependencies": {
     "@mfro/assert": "^1.0.0",
+    "@mfro/sync-vue": "^1.0.0",
     "@mfro/vue-ui": "^1.0.9",
-    "googleapis": "^107.0.0",
-    "pdf2json": "^2.0.1",
     "pdfjs-dist": "^2.16.105",
     "vue": "^3.2.31"
   },
@@ -25,7 +24,6 @@
     "@vue/tsconfig": "^0.1.3",
     "autoprefixer": "^10.4.2",
     "csstype": "^3.0.10",
-    "ress": "5.0.2",
     "sass": "^1.49.7",
     "typescript": "~4.7.4",
     "vite": "^2.7.13",

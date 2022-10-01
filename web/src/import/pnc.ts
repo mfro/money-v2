@@ -1,34 +1,40 @@
-import type * as pdfjson from 'pdfjs-dist';
 import { assert } from '@mfro/assert';
-import { Money, Transaction } from '@/common';
+import { Money } from '@/common';
+import { Collection, MoneyContext } from '@/store';
 
 import { readDir, readFile } from './google-drive';
+import { parsePDF, Text } from './pdf';
 
-const pdfjs: typeof pdfjson = (window as any).pdfjsLib;
-pdfjs.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
+interface ParsedTransaction {
+  date: { day: number, month: number };
+  value: Money;
+  description: string;
+}
 
-function parseDebitStatement(pages: string[][], year: number) {
-  const summaryPage = pages.find(p => p.includes('Balance Summary'));
+function parseDebitStatement(pages: Text[][]) {
+  const summaryPage = pages.find(p => p.some(t => t.value == 'Balance Summary'));
   assert(summaryPage != null, 'pnc debit: no balance suppery');
 
-  const summaryIndex = summaryPage.indexOf('Balance Summary');
+  const summaryIndex = summaryPage.findIndex(t => t.value == 'Balance Summary');
 
-  const totalPositive = Money.load('$0' + summaryPage[summaryIndex + 10]);
-  const totalNegative = Money.load('$0' + summaryPage[summaryIndex + 11]);
+  const totalPositive = Money.load('$0' + summaryPage[summaryIndex + 10].value);
+  const totalNegative = Money.load('$0' + summaryPage[summaryIndex + 11].value);
   const total = totalPositive.cents - totalNegative.cents;
 
-  const transactions: Transaction[] = [];
+  const transactions: ParsedTransaction[] = [];
 
-  console.log(`debit statement: ${Money.save({ cents: total })}`);
+  for (const page of pages) {
+    console.log(page);
+  }
 
-  const activityDetailIndex = pages.findIndex(p => p.includes('Activity Detail'));
+  const activityDetailIndex = pages.findIndex(p => p.some(t => t.value == 'Activity Detail'));
   const activityDetail = pages.slice(activityDetailIndex).flat();
 
-  let index = activityDetail.indexOf('Activity Detail') + 1;
+  let index = activityDetail.findIndex(t => t.value == 'Activity Detail') + 1;
   let parse: (entry: string[]) => void = () => assert(false, 'no mode');
 
   function parseDefault(sign: number) {
-    while (activityDetail[index] != 'Description') {
+    while (activityDetail[index].value != 'Description') {
       index += 1;
     }
     index += 1
@@ -50,12 +56,13 @@ function parseDebitStatement(pages: string[][], year: number) {
         value.cents *= sign;
 
         const description = section.slice(index + 2, next_index).join(' ');
+        assert(next_index - index <= 4, 'description');
 
-        console.log(`${month}/${day} ${Money.save(value)} ${description}`);
+        console.log(`    ${month}/${day} ${Money.save(value)} ${description}`);
         index = next_index;
 
         transactions.push({
-          date: { day, month, year },
+          date: { day, month },
           value,
           description,
         });
@@ -64,7 +71,7 @@ function parseDebitStatement(pages: string[][], year: number) {
   }
 
   function parseChecks() {
-    while (activityDetail[index] != 'Reference') {
+    while (activityDetail[index].value != 'Reference') {
       index += 1;
     }
     index += 2;
@@ -85,7 +92,7 @@ function parseDebitStatement(pages: string[][], year: number) {
         value.cents = -value.cents;
 
         transactions.push({
-          date: { day, month, year },
+          date: { day, month },
           value,
           description,
         });
@@ -105,7 +112,7 @@ function parseDebitStatement(pages: string[][], year: number) {
   loop:
   while (index < activityDetail.length) {
     const line = activityDetail[index];
-    switch (line) {
+    switch (line.value) {
       case 'Deposits and Other Additions':
         flush();
         parseDefault(+1);
@@ -129,13 +136,13 @@ function parseDebitStatement(pages: string[][], year: number) {
         break loop;
 
       default:
-        if (line.endsWith('continued on next page')) {
-          while (activityDetail[index] != '- continued') {
+        if (/continued on next page$/.test(line.value) || /^Page \d of $/.test(line.value)) {
+          while (activityDetail[index].value != '- continued') {
             index += 1;
           }
           index += 1;
         } else {
-          section.push(line);
+          section.push(line.value);
         }
 
         index += 1;
@@ -148,195 +155,105 @@ function parseDebitStatement(pages: string[][], year: number) {
   return transactions;
 }
 
-function parseCreditStatement(pages: string[][], year: number) {
-  const summaryPage = pages.find(p => p.includes('Balance Summary'));
-  assert(summaryPage != null, 'pnc debit: no balance suppery');
+function parseCreditStatement(pages: Text[][]) {
+  assert(pages.length == 4, 'credit statement');
 
-  const summaryIndex = summaryPage.indexOf('Balance Summary');
+  let total = 0;
 
-  const totalPositive = Money.load('$0' + summaryPage[summaryIndex + 10]);
-  const totalNegative = Money.load('$0' + summaryPage[summaryIndex + 11]);
-  const total = totalPositive.cents - totalNegative.cents;
-  let check = 0;
+  for (const label of ['- Total payments received', '- Credits']) {
+    const index = pages[0].findIndex(t => t.value == label);
+    assert(index != -1, 'credits statement total');
 
-  const transactions: Transaction[] = [];
-
-  console.log(`debit statement: ${Money.save({ cents: total })}`);
-
-  const activityDetailIndex = pages.findIndex(p => p.includes('Activity Detail'));
-  const activityDetail = pages.slice(activityDetailIndex).flat();
-
-  let index = activityDetail.indexOf('Activity Detail') + 1;
-  let parse: (entry: string[]) => void = () => assert(false, 'no mode');
-
-  function parseDefault(sign: number) {
-    while (activityDetail[index] != 'Description') {
-      index += 1;
-    }
-    index += 1
-
-    parse = (section) => {
-      let index = 0;
-      while (index < section.length) {
-        let next_index = section.slice(index + 1).findIndex(line => /^(\d\d)\/(\d\d)$/.test(line));
-        if (next_index == -1) next_index = section.length;
-        else next_index += index + 1;
-
-        const match = /^(\d\d)\/(\d\d)$/.exec(section[index]);
-        assert(match != null, 'default parse');
-
-        const month = parseInt(match[1]);
-        const day = parseInt(match[2]);
-
-        const value = Money.load(`$0${section[index + 1]}`);
-        value.cents *= sign;
-        check += value.cents;
-
-        const description = section.slice(index + 2, next_index).join(' ');
-
-        console.log(`${month}/${day} ${Money.save(value)} ${description}`);
-        index = next_index;
-
-        transactions.push({
-          date: { day, month, year },
-          value,
-          description,
-        });
-      };
-    }
+    total += Money.load(pages[0][index + 1].value).cents;
   }
 
-  function parseChecks() {
-    while (activityDetail[index] != 'Reference') {
-      index += 1;
-    }
-    index += 2;
+  for (const label of ['+ Purchases', '+ Cash advances', '+ Fees charged', '+ Interest charged']) {
+    const index = pages[0].findIndex(t => t.value == label);
+    assert(index != -1, 'credits statement total');
 
-    parse = (section) => {
-      for (let i = 0; i + 3 < section.length; i += 4) {
-        const match = /\d{4}/.exec(section[i + 0]);
-        assert(match != null, 'check check');
+    total -= Money.load(pages[0][index + 1].value).cents;
+  }
 
-        const matchDate = /(\d\d)\/(\d\d)/.exec(section[i + 2]);
-        assert(matchDate != null, 'matchDate');
+  const transactions: ParsedTransaction[] = [];
+  for (const page of pages.slice(1)) {
+    const column = page.filter(t => t.x < 400);
+    column.sort((a, b) => (a.y - b.y) || (a.x - b.x));
 
-        const month = parseInt(matchDate[1]);
-        const day = parseInt(matchDate[2]);
+    let index = column.findIndex(t => t.value == 'Amount') + 1;
 
-        const description = `Check #${section[i + 0]}`;
-        const value = Money.load(`$0${section[i + 1]}`);
-        value.cents = -value.cents;
+    for (; index < column.length; index += 4) {
+      const matchDate = /(\d\d)\/(\d\d)/.exec(column[index].value);
+      if (!matchDate) break;
 
-        transactions.push({
-          date: { day, month, year },
-          value,
-          description,
-        });
+      const month = parseInt(matchDate[1]);
+      const day = parseInt(matchDate[2]);
+
+      const description = `Check #${column[index + 2].value}`;
+
+      const raw = column[index + 3].value;
+
+      let value;
+      if (raw.endsWith('-')) {
+        value = Money.load(raw.slice(0, -1));
+      } else {
+        value = Money.load(raw);
+        value.cents *= -1;
       }
+
+      transactions.push({
+        date: { day, month },
+        value,
+        description,
+      });
     }
   }
 
-  function flush() {
-    if (section.length > 0) {
-      parse(section);
-      section.length = 0;
-    }
-  }
-
-  const section: string[] = [];
-
-  loop:
-  while (index < activityDetail.length) {
-    const line = activityDetail[index];
-    switch (line) {
-      case 'Deposits and Other Additions':
-        flush();
-        parseDefault(+1);
-        break;
-
-      case 'Banking/Check Card Withdrawals and Purchases':
-      case 'Banking/Debit Card Withdrawals and Purchases':
-      case 'Online and Electronic Banking Deductions':
-      case 'Other Deductions':
-        flush();
-        parseDefault(-1);
-        break;
-
-      case 'Checks and Substitute Checks':
-        flush();
-        parseChecks();
-        break;
-
-      case 'Daily Balance Detail':
-        flush();
-        break loop;
-
-      default:
-        if (line.endsWith('continued on next page')) {
-          while (activityDetail[index] != '- continued') {
-            index += 1;
-          }
-          index += 1;
-        } else {
-          section.push(line);
-        }
-
-        index += 1;
-    }
-  }
-
+  const check = transactions.reduce((check, t) => check + t.value.cents, 0);
   assert(check == total, 'statement check');
 
   return transactions;
 }
 
-async function loadPDFText(raw: ArrayBuffer) {
-  const pdf = await pdfjs.getDocument(raw).promise;
+async function importAccount(context: MoneyContext, description: string, directoryId: string, parse: (pages: Text[][]) => ParsedTransaction[]) {
+  const account = Collection.array(context.accounts).find(a => a.description == description)
+    || Collection.insert(context.accounts, { description });
 
-  const pageTasks = [];
+  console.log(`importing account ${account.description}`);
 
-  for (let i = 1; i <= pdf.numPages; ++i) {
-    pageTasks.push(pdf.getPage(i).then(async page => {
-      const opList = await page.getOperatorList();
-      const text: string[] = [];
+  for (const file of await readDir(directoryId)) {
+    const existing = Collection.array(context.imports).find(i => i.accountId == account.id && i.key == file.name);
+    if (existing) continue;
 
-      for (let i = 0; i < opList.fnArray.length; ++i) {
-        if (opList.fnArray[i] == pdfjs.OPS.showText) {
-          const [chars] = opList.argsArray[i];
-          const string = chars.map((ch: any) => ch.unicode).join('');
-          text.push(string);
-        }
-      }
+    console.log(`  importing statement ${file.name}`);
 
-      return text;
-    }));
+    const match = /Statement_(\w+)_(\d+)_(\d+)\.pdf/.exec(file.name!);
+    assert(match != null, 'match');
+
+    const year = parseInt(match[3]);
+
+    const buffer = await readFile(file.id!);
+    const pages = await parsePDF(buffer);
+    const transactions = parse(pages);
+
+    const import_ = Collection.insert(context.imports, {
+      accountId: account.id,
+      description: `PDF statement ${file.name}`,
+      key: file.name,
+    });
+
+    for (const t of transactions) {
+      Collection.insert(context.transactions, {
+        importId: import_.id,
+        labelId: null,
+        date: { ...t.date, year },
+        description: t.description,
+        value: t.value,
+      });
+    }
   }
-
-  return await Promise.all(pageTasks);
 }
 
-export async function importPNC() {
-  for (const file of await readDir('185L3i1gzhqwTbKDdgBaoawwQRZjcl1Ir')) {
-    const buffer = await readFile(file.id!);
-
-    const match = /Statement_(\w+)_(\d+)_(\d+)\.pdf/.exec(file.name!);
-    assert(match != null, 'match');
-
-    const year = parseInt(match[3]);
-
-    const pages = await loadPDFText(buffer);
-    parseDebitStatement(pages, year);
-  }
-
-  for (const file of await readDir('185L3i1gzhqwTbKDdgBaoawwQRZjcl1Ir')) {
-    const buffer = await readFile(file.id!);
-
-    const match = /Statement_(\w+)_(\d+)_(\d+)\.pdf/.exec(file.name!);
-    assert(match != null, 'match');
-
-    const year = parseInt(match[3]);
-
-    const pages = await loadPDFText(buffer);
-    parseDebitStatement(pages, year);
-  }
+export async function importPNC(context: MoneyContext) {
+  await importAccount(context, 'PNC Virtual Wallet Debit', '185L3i1gzhqwTbKDdgBaoawwQRZjcl1Ir', parseDebitStatement);
+  await importAccount(context, 'PNC Cash Rewards Visa Signature', '1j0Psbc39iudkTpNIBHKahPCXGzs1WD_A', parseCreditStatement);
 }

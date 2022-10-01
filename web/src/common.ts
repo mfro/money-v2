@@ -1,20 +1,5 @@
 import { assert } from '@mfro/assert';
 
-export interface MoneyNode {
-  transactions: Transaction[];
-  labels: Label[];
-  tags: Tag[];
-}
-
-export interface Label {
-  tags: number[];
-  name: string;
-}
-
-export interface Tag {
-  name: string;
-}
-
 export interface Date {
   day: number;
   month: number;
@@ -111,65 +96,48 @@ export namespace Money {
   }
 }
 
-export interface Transaction {
-  date: Date;
-  description: string;
-  value: Money;
-}
+// export interface Transaction {
+//   date: Date;
+//   description: string;
+//   value: Money;
+// }
 
-export namespace Transaction {
-  export function normalize(t: Transaction) {
-    if (/DEBIT CARD PURCHASE   XXXXX\d{4}/i.test(t.description)) {
-      if (/amazon|amzn/i.test(t.description))
-        return 'amazon';
+// export namespace Transaction {
+//   export function normalize(t: Transaction) {
+//     if (/DEBIT CARD PURCHASE   XXXXX\d{4}/i.test(t.description)) {
+//       if (/amazon|amzn/i.test(t.description))
+//         return 'amazon';
 
-      return t.description.slice(31);
-    }
+//       return t.description.slice(31);
+//     }
 
-    return t.description;
-  }
+//     return t.description;
+//   }
 
-  export function description(t: Transaction) {
-    const lower = t.description.toLowerCase();
+//   export function description(t: Transaction) {
+//     const lower = t.description.toLowerCase();
 
-    if (lower.startsWith('debit card purchase')) {
-      let rest = lower.slice(20);
-      let parts = rest.split(' ').filter(a => a)
-      let details = parts[1];
-      let location = parts[parts.length - 2];
-      let state = parts[parts.length - 1];
-      let description = parts.slice(1, parts.length - 2).join(' ');
-      return `debit: ${description} (${location} ${state})`;
-    }
+//     if (lower.startsWith('debit card purchase')) {
+//       let rest = lower.slice(20);
+//       let parts = rest.split(' ').filter(a => a)
+//       let details = parts[1];
+//       let location = parts[parts.length - 2];
+//       let state = parts[parts.length - 1];
+//       let description = parts.slice(1, parts.length - 2).join(' ');
+//       return `debit: ${description} (${location} ${state})`;
+//     }
 
-    if (lower.startsWith('ach credit')) {
-      let rest = lower.slice(11);
-      return `ach credit: ${rest}`;
-    }
+//     if (lower.startsWith('ach credit')) {
+//       let rest = lower.slice(11);
+//       return `ach credit: ${rest}`;
+//     }
 
-    return lower;
-  }
+//     return lower;
+//   }
 
-  export function eq(a: Transaction, b: Transaction) {
-    return Date.eq(a.date, b.date)
-      && a.description == b.description
-      && Money.eq(a.value, b.value)
-  }
-}
-
-// eg: takeout, fun, required, health
-export interface Tag {
-  value: string;
-}
-
-export interface Expense {
-  transaction: Transaction;
-  details: string;
-  tags: Set<Tag>;
-}
-
-export interface Data {
-  tags: Tag[];
-  expenses: Expense[];
-  transactions: Transaction[];
-}
+//   export function eq(a: Transaction, b: Transaction) {
+//     return Date.eq(a.date, b.date)
+//       && a.description == b.description
+//       && Money.eq(a.value, b.value)
+//   }
+// }

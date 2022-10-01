@@ -29,6 +29,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   resolve: {
+    preserveSymlinks: true,
     alias: {
       '@': resolve('src'),
     },
