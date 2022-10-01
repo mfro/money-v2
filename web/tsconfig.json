@@ -26,6 +26,11 @@
     "moduleResolution": "node",
     "preserveValueImports": false,
     "allowJs": true,
+    "types": [
+      "gapi",
+      "gapi.client.drive",
+      "google.accounts"
+    ],
     "lib": [
       "ES2019",
       "DOM",

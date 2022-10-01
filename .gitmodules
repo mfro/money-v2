@@ -1,6 +1,0 @@
-[submodule ".node_modules/@mfro/vue-ui"]
-	path = .node_modules/@mfro/vue-ui
-	url = git@github.com:mfro/vue-ui.git
-[submodule ".node_modules/@mfro/ts-common"]
-	path = .node_modules/@mfro/ts-common
-	url = git@github.com:mfro/ts-common.git

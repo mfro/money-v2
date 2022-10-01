@@ -1,7 +1,6 @@
-import { assert } from '@mfro/ts-common/assert';
-import { ObjectId } from 'mongodb';
+import { assert } from '@mfro/assert';
 
-export interface MoneyContext {
+export interface MoneyNode {
   transactions: Transaction[];
   labels: Label[];
   tags: Tag[];

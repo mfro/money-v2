@@ -2,7 +2,6 @@
   "private": true,
   "workspaces": [
     "web",
-    "server",
-    ".node_modules/**/*"
+    "server"
   ]
 }

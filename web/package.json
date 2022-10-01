@@ -10,9 +10,17 @@
     "typewatch": "tsc --noEmit --watch"
   },
   "dependencies": {
+    "@mfro/assert": "^1.0.0",
+    "@mfro/vue-ui": "^1.0.9",
+    "googleapis": "^107.0.0",
+    "pdf2json": "^2.0.1",
+    "pdfjs-dist": "^2.16.105",
     "vue": "^3.2.31"
   },
   "devDependencies": {
+    "@types/gapi": "^0.0.42",
+    "@types/gapi.client.drive": "^3.0.14",
+    "@types/google.accounts": "^0.0.2",
     "@vitejs/plugin-vue": "^2.1.0",
     "@vue/tsconfig": "^0.1.3",
     "autoprefixer": "^10.4.2",
