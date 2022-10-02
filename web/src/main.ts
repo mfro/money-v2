@@ -16,6 +16,11 @@ main();
 async function main() {
   const context = await open();
 
+  Object.assign(window, {
+    context,
+    Collection,
+  });
+
   const app = createApp({
     provide: { context },
     render: () => h(App),
@@ -26,8 +31,6 @@ async function main() {
   app.use(framework);
 
   app.mount('#app');
-
-  Object.assign(window, { context });
 
   await importPNC(context);
 

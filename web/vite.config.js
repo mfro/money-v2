@@ -1,7 +1,8 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vite'
 
-import vuePlugin from '@vitejs/plugin-vue';
+import vue from '@vitejs/plugin-vue';
+import vueJsx from '@vitejs/plugin-vue-jsx'
 import autoprefixer from 'autoprefixer';
 
 // https://vitejs.dev/config/
@@ -9,13 +10,16 @@ export default defineConfig({
   root: 'src',
   base: '',
   plugins: [
-    vuePlugin({
+    vue({
       template: {
         compilerOptions: {
           whitespace: 'condense',
         },
       },
     }),
+    vueJsx({
+
+    })
   ],
   css: {
     postcss: {
@@ -33,5 +37,9 @@ export default defineConfig({
     alias: {
       '@': resolve('src'),
     },
+  },
+
+  optimizeDeps: {
+    exclude: ['@mfro/vue-ui'],
   },
 });

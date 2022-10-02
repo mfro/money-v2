@@ -4,7 +4,6 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
-    "../core/src/index.ts",
   ],
   "compilerOptions": {
     "baseUrl": ".",
@@ -12,16 +11,7 @@
       "@/*": [
         "./src/*"
       ],
-      "dominion.core": [
-        "../core/src"
-      ],
-      "dominion.core/*": [
-        "../core/src/*"
-      ],
     },
-    "jsx": "react",
-    "jsxFactory": "tsx",
-    "jsxFragmentFactory": "tsx.fragment",
     "importsNotUsedAsValues": "remove",
     "moduleResolution": "node",
     "preserveValueImports": false,

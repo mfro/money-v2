@@ -5,6 +5,8 @@ import { Collection, MoneyContext } from '@/store';
 import { readDir, readFile } from './google-drive';
 import { parsePDF, Text } from './pdf';
 
+const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 interface ParsedTransaction {
   date: { day: number, month: number };
   value: Money;
@@ -73,7 +75,10 @@ function parseDebitStatement(pages: Text[][]) {
         assert(match != null, 'default parse');
 
         const month = parseInt(match[1]);
+        assert(month >= 1 && month <= 12, 'invalid month');
+
         const day = parseInt(match[2]);
+        assert(day >= 1 && day <= 31, 'invalid day');
 
         const value = Money.load(`$0${column[index++].value}`);
         value.cents *= sign;
@@ -84,6 +89,7 @@ function parseDebitStatement(pages: Text[][]) {
         }
 
         const description = descriptionLines.join(' ');
+        assert(description.length > 0 && description.length <= 60, 'invalid description');
 
         transactions.push({
           date: { day, month },
@@ -116,9 +122,12 @@ function parseDebitStatement(pages: Text[][]) {
         assert(matchDate != null, 'matchDate');
 
         const month = parseInt(matchDate[1]);
-        const day = parseInt(matchDate[2]);
+        assert(month >= 1 && month <= 12, 'invalid month');
 
-        const description = `Check #${match[1]}`;
+        const day = parseInt(matchDate[2]);
+        assert(day >= 1 && day <= 31, 'invalid day');
+
+        const description = `Check #${match[0]}`;
 
         const _referenceNumber = column[index++].value;
 
@@ -170,7 +179,7 @@ function parseCreditStatement(pages: Text[][]) {
       const month = parseInt(matchDate[1]);
       const day = parseInt(matchDate[2]);
 
-      const description = `Check #${column[index + 2].value}`;
+      const description = column[index + 2].value;
 
       const raw = column[index + 3].value;
 
@@ -211,7 +220,9 @@ async function importAccount(context: MoneyContext, description: string, directo
     const match = /Statement_(\w+)_(\d+)_(\d+)\.pdf/.exec(file.name!);
     assert(match != null, 'match');
 
-    const year = parseInt(match[3]);
+    const statementYear = parseInt(match[3]);
+    const statementMonth = months.indexOf(match[1]);
+    assert(statementMonth > 0, 'invalid statementh month');
 
     const buffer = await readFile(file.id!);
     const pages = await parsePDF(buffer);
@@ -224,9 +235,14 @@ async function importAccount(context: MoneyContext, description: string, directo
     });
 
     for (const t of transactions) {
+      // if (t.date.month != statementMonth) debugger;
+      const year = statementMonth == 1 && t.date.month == 12
+        ? statementYear - 1 : statementYear;
+
       Collection.insert(context.transactions, {
         importId: import_.id,
-        labelId: null,
+        label: null,
+        tagIds: [],
         date: { ...t.date, year },
         description: t.description,
         value: t.value,

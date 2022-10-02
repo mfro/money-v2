@@ -73,7 +73,7 @@ export namespace Money {
 
   export function save(value: Money): string {
     if (value.cents == 0)
-      return '';
+      return '$0';
 
     let c = value.cents;
     const negative = c < 0;
@@ -95,49 +95,3 @@ export namespace Money {
     return a.cents == b.cents;
   }
 }
-
-// export interface Transaction {
-//   date: Date;
-//   description: string;
-//   value: Money;
-// }
-
-// export namespace Transaction {
-//   export function normalize(t: Transaction) {
-//     if (/DEBIT CARD PURCHASE   XXXXX\d{4}/i.test(t.description)) {
-//       if (/amazon|amzn/i.test(t.description))
-//         return 'amazon';
-
-//       return t.description.slice(31);
-//     }
-
-//     return t.description;
-//   }
-
-//   export function description(t: Transaction) {
-//     const lower = t.description.toLowerCase();
-
-//     if (lower.startsWith('debit card purchase')) {
-//       let rest = lower.slice(20);
-//       let parts = rest.split(' ').filter(a => a)
-//       let details = parts[1];
-//       let location = parts[parts.length - 2];
-//       let state = parts[parts.length - 1];
-//       let description = parts.slice(1, parts.length - 2).join(' ');
-//       return `debit: ${description} (${location} ${state})`;
-//     }
-
-//     if (lower.startsWith('ach credit')) {
-//       let rest = lower.slice(11);
-//       return `ach credit: ${rest}`;
-//     }
-
-//     return lower;
-//   }
-
-//   export function eq(a: Transaction, b: Transaction) {
-//     return Date.eq(a.date, b.date)
-//       && a.description == b.description
-//       && Money.eq(a.value, b.value)
-//   }
-// }
