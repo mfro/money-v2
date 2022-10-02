@@ -24,42 +24,66 @@ function parseDebitStatement(pages: Text[][]) {
   const transactions: ParsedTransaction[] = [];
 
   for (const page of pages) {
-    console.log(page);
-  }
+    const column = page.filter(t => t.x < 380 && t.y > 101 && t.y < 800);
+    column.sort((a, b) => (a.y - b.y) || (a.x - b.x));
 
-  const activityDetailIndex = pages.findIndex(p => p.some(t => t.value == 'Activity Detail'));
-  const activityDetail = pages.slice(activityDetailIndex).flat();
+    // console.log(column);
 
-  let index = activityDetail.findIndex(t => t.value == 'Activity Detail') + 1;
-  let parse: (entry: string[]) => void = () => assert(false, 'no mode');
+    let index = 0;
+    let parse = () => { index += 1; };
 
-  function parseDefault(sign: number) {
-    while (activityDetail[index].value != 'Description') {
-      index += 1;
+    loop:
+    while (index < column.length) {
+      switch (column[index].value) {
+        case 'Deposits and Other Additions':
+          parseDefault(+1);
+          break;
+
+        case 'Banking/Check Card Withdrawals and Purchases':
+        case 'Banking/Debit Card Withdrawals and Purchases':
+        case 'Online and Electronic Banking Deductions':
+        case 'Other Deductions':
+          parseDefault(-1);
+          break;
+
+        case 'Checks and Substitute Checks':
+          parseChecks();
+          break;
+
+        case 'Daily Balance Detail':
+          break loop;
+
+        default:
+          parse();
+      }
     }
-    index += 1
 
-    parse = (section) => {
-      let index = 0;
-      while (index < section.length) {
-        let next_index = section.slice(index + 1).findIndex(line => /^(\d\d)\/(\d\d)$/.test(line));
-        if (next_index == -1) next_index = section.length;
-        else next_index += index + 1;
+    function parseDefault(sign: number) {
+      index += 1;
+      if (column[index].value == '\t- continued') index += 1;
 
-        const match = /^(\d\d)\/(\d\d)$/.exec(section[index]);
+      assert(column[index++].value == 'Date', 'debit statement default');
+      assert(column[index++].value == 'Amount', 'debit statement default');
+      assert(column[index++].value == 'Description', 'debit statement default');
+
+      parse = () => {
+        const o = column[index];
+
+        const match = /^(\d\d)\/(\d\d)$/.exec(column[index++].value);
         assert(match != null, 'default parse');
 
         const month = parseInt(match[1]);
         const day = parseInt(match[2]);
 
-        const value = Money.load(`$0${section[index + 1]}`);
+        const value = Money.load(`$0${column[index++].value}`);
         value.cents *= sign;
 
-        const description = section.slice(index + 2, next_index).join(' ');
-        assert(next_index - index <= 4, 'description');
+        const descriptionLines = [];
+        while (index < column.length && column[index].x != o.x) {
+          descriptionLines.push(column[index++].value);
+        }
 
-        console.log(`    ${month}/${day} ${Money.save(value)} ${description}`);
-        index = next_index;
+        const description = descriptionLines.join(' ');
 
         transactions.push({
           date: { day, month },
@@ -68,84 +92,42 @@ function parseDebitStatement(pages: Text[][]) {
         });
       };
     }
-  }
 
-  function parseChecks() {
-    while (activityDetail[index].value != 'Reference') {
+    function parseChecks() {
       index += 1;
-    }
-    index += 2;
 
-    parse = (section) => {
-      for (let i = 0; i + 3 < section.length; i += 4) {
-        const match = /\d{4}/.exec(section[i + 0]);
+      assert(column[index++].value == 'Check', 'debit statement check');
+      assert(column[index++].value == '', 'debit statement check');
+      assert(column[index++].value == 'Date', 'debit statement check');
+      assert(column[index++].value == 'Reference', 'debit statement check');
+      assert(column[index++].value == 'number', 'debit statement check');
+      assert(column[index++].value == 'Amount', 'debit statement check');
+      assert(column[index++].value == 'paid', 'debit statement check');
+      assert(column[index++].value == 'number', 'debit statement check');
+
+      parse = () => {
+        const match = /^\d{4}$/.exec(column[index++].value);
         assert(match != null, 'check check');
 
-        const matchDate = /(\d\d)\/(\d\d)/.exec(section[i + 2]);
+        const value = Money.load(`$0${column[index++].value}`);
+        value.cents = -value.cents;
+
+        const matchDate = /^(\d\d)\/(\d\d)$/.exec(column[index++].value);
         assert(matchDate != null, 'matchDate');
 
         const month = parseInt(matchDate[1]);
         const day = parseInt(matchDate[2]);
 
-        const description = `Check #${section[i + 0]}`;
-        const value = Money.load(`$0${section[i + 1]}`);
-        value.cents = -value.cents;
+        const description = `Check #${match[1]}`;
+
+        const _referenceNumber = column[index++].value;
 
         transactions.push({
           date: { day, month },
           value,
           description,
         });
-      }
-    }
-  }
-
-  function flush() {
-    if (section.length > 0) {
-      parse(section);
-      section.length = 0;
-    }
-  }
-
-  const section: string[] = [];
-
-  loop:
-  while (index < activityDetail.length) {
-    const line = activityDetail[index];
-    switch (line.value) {
-      case 'Deposits and Other Additions':
-        flush();
-        parseDefault(+1);
-        break;
-
-      case 'Banking/Check Card Withdrawals and Purchases':
-      case 'Banking/Debit Card Withdrawals and Purchases':
-      case 'Online and Electronic Banking Deductions':
-      case 'Other Deductions':
-        flush();
-        parseDefault(-1);
-        break;
-
-      case 'Checks and Substitute Checks':
-        flush();
-        parseChecks();
-        break;
-
-      case 'Daily Balance Detail':
-        flush();
-        break loop;
-
-      default:
-        if (/continued on next page$/.test(line.value) || /^Page \d of $/.test(line.value)) {
-          while (activityDetail[index].value != '- continued') {
-            index += 1;
-          }
-          index += 1;
-        } else {
-          section.push(line.value);
-        }
-
-        index += 1;
+      };
     }
   }
 

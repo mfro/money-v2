@@ -1,8 +1,6 @@
 <template>
   <v-app class="root">
-    <pre>
-      {{ JSON.stringify(context, null, '  ') }}
-    </pre>
+    <pre class="pa-3">{{ JSON.stringify(context, null, '  ') }}</pre>
   </v-app>
 </template>
 
@@ -22,5 +20,6 @@ const context = inject('context');
 <style scoped lang="scss">
 pre {
   white-space: pre;
+  margin: 0;
 }
 </style>

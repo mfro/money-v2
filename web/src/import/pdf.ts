@@ -52,11 +52,11 @@ export async function parsePDF(raw: ArrayBuffer) {
     const viewbox = page.getViewport().viewBox;
 
     const canvas = document.createElement('canvas');
-    // canvas.width = viewport.viewBox[2] - viewport.viewBox[0];
-    // canvas.height = viewport.viewBox[3] - viewport.viewBox[1];
+    // canvas.width = viewbox[2] - viewbox[0];
+    // canvas.height = viewbox[3] - viewbox[1];
 
     const context = canvas.getContext('2d')!;
-    // context.translate(viewport.viewBox[0], viewport.viewBox[3]);
+    // context.translate(viewbox[0], viewbox[3]);
     // context.scale(1, -1);
 
     let state = defaultState();
@@ -75,6 +75,9 @@ export async function parsePDF(raw: ArrayBuffer) {
           // console.log(`setTextMatrix`, state.textMatrix, opList.argsArray[i], mult(state.textMatrix, opList.argsArray[i]));
           state.textMatrix = opList.argsArray[i];
           state.textMatrixScale = Math.hypot(state.textMatrix[0], state.textMatrix[1]);
+
+          state.x = state.lineX = 0;
+          state.y = state.lineY = 0;
           break;
 
         case pdfjs.OPS.moveText:
