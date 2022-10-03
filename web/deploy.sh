@@ -1,7 +1,9 @@
+source_dir="$PWD"
+
 if [ ! -d "gh-pages" ]; then
   origin=$(git remote get-url origin)
   git clone --depth=1 --branch "gh-pages" "$origin" "gh-pages"
-  code=0
+  code=$?
   if [ $code != 0 ]; then
     mkdir "gh-pages"
     cd "gh-pages"
@@ -10,18 +12,22 @@ if [ ! -d "gh-pages" ]; then
     git checkout --orphan "gh-pages"
     git commit --allow-empty --message "create gh-pages"
     git push -u origin "gh-pages"
-    cd ..
+    cd "$source_dir"
   fi
 fi
 
-set -e
+yarn build
+code=$?
 
-yarn build --base=/dominion/
+if [ $code != 0 ]; then
+  echo "build failed"
+  exit $code
+fi
 
 cd "gh-pages"
 git pull
 rm -r *
-cp -r "../dist"/* .
+cp -r "$source_dir/dist"/* .
 git add .
 git commit -m "gh-pages"
 git push

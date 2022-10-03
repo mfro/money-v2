@@ -24,8 +24,8 @@
         <Chart style="flex: 1 1 0"
                type="by-tag" />
 
-        <Chart style="flex: 1 1 0"
-               type="by-tag-unique" />
+        <!-- <Chart style="flex: 1 1 0"
+               type="by-tag-unique" /> -->
       </v-flex>
     </template>
 

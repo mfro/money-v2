@@ -1,7 +1,7 @@
 import { Chart, registerables } from 'chart.js';
 import { defineComponent, h, inject, Ref, shallowRef, toRef, watchEffect } from 'vue';
 import { assert } from '@mfro/assert';
-import { MoneyContext, Transaction } from '@/store';
+import { MoneyContext, Tag, Transaction } from '@/store';
 import { UIContext } from '@/ui/context';
 
 Chart.register(...registerables);
@@ -96,44 +96,66 @@ export default defineComponent({
           },
         });
       } else if (props.type == 'by-tag') {
-        const tags = new Map<number, { name: string, value: number }>();
+        const roots = new Set<Tag>();
+        const uniqueMap = new Map<string, { closure: Set<Tag>, value: number }>();
 
         for (const t of context.transactions) {
-          for (const tagId of t.tagIds) {
-            let info = tags.get(tagId);
-            if (!info) tags.set(tagId, info = { name: context.data.tags[tagId].name, value: 0 });
+          const closure = context.tagClosureMap.get(t)!;
+          const tagString = t.tagIds.map(id => context.data.tags[id].name).sort().join(' ');
 
-            info.value += t.value.cents;
-          }
+          let info = uniqueMap.get(tagString);
+          if (!info) uniqueMap.set(tagString, info = { closure, value: 0 });
+
+          info.value += t.value.cents;
+          for (const tag of closure) roots.add(tag);
         }
 
-        const src = [...tags].sort((a, b) => a[1].value - b[1].value);
-        const sign = src.every(v => v[1].value < 0) ? -1 : 1;
+        const unique = [...uniqueMap].sort((a, b) => a[1].value - b[1].value);
 
-        const labels = src.map(v => v[1].name);
-        const values = src.map(v => sign * v[1].value / 100);
+        const tagList = [...roots].sort((a, b) => context.tagValueMap.get(a)!.cents - context.tagValueMap.get(b)!.cents);
+        const labels = tagList.map(t => t.name);
+
+        const colorA = [0x00, 0xc0, 0x00];
+        const colorB = [0x00, 0x00, 0x00];
+
+        const colorStep = colorB.map((v, i) => (v - colorA[i]) / labels.length);
+        // const colors = labels.map((_, index) => '#' + colorA.map((v, i) => Math.round(v + colorStep[i] * index).toString(16).padStart(2, '0')).join(''));
+        const colors = [
+          '#a50026',
+          '#d73027',
+          '#f46d43',
+          '#fdae61',
+          '#fee08b',
+          '#ffffbf',
+          '#d9ef8b',
+          '#a6d96a',
+          '#66bd63',
+          '#1a9850',
+          '#006837',
+        ];
+
+        const sign = unique.every(v => v[1].value < 0) ? -1 : 1;
+
+        const datasets: any[] = [];
+        for (let i = 0; i < unique.length; ++i) {
+          const [string, { closure, value }] = unique[i];
+          const color = colors[i % colors.length];
+
+          datasets.push({
+            label: string,
+            data: tagList.map(t => closure.has(t) ? sign * value / 100 : 0),
+            backgroundColor: color,
+            borderColor: 'black',
+            borderWidth: 1,
+            borderSkipped: false,
+          });
+        }
 
         chart = new Chart(ctx, {
           type: 'bar',
           data: {
             labels,
-            datasets: [{
-              label: 'money',
-              data: values,
-              backgroundColor: [
-                // '#a50026',
-                // '#d73027',
-                // '#f46d43',
-                // '#fdae61',
-                // '#fee08b',
-                // '#ffffbf',
-                // '#d9ef8b',
-                // '#a6d96a',
-                // '#66bd63',
-                '#1a9850',
-                // '#006837',
-              ],
-            }],
+            datasets,
           },
           options: {
             aspectRatio: bounds.width / bounds.height,
@@ -143,13 +165,22 @@ export default defineComponent({
                 display: false,
               },
             },
+            scales: {
+              x: {
+                stacked: true,
+              },
+              y: {
+                stacked: true
+              }
+            }
           },
         });
       } else if (props.type == 'by-tag-unique') {
         const tags = new Map<string, { value: number }>();
 
         for (const t of context.transactions) {
-          const tagString = t.tagIds.map(id => context.data.tags[id].name).sort().join(' ');
+          const tagString = [...context.tagClosureMap.get(t)!]
+            .map(tag => tag.name).sort().join(' ');
 
           let info = tags.get(tagString);
           if (!info) tags.set(tagString, info = { value: 0 });
