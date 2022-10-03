@@ -14,15 +14,15 @@ pdfjs.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pd
 main();
 
 async function main() {
-  const context = await open();
+  const data = await open();
 
   Object.assign(window, {
-    context,
+    data,
     Collection,
   });
 
   const app = createApp({
-    provide: { context },
+    provide: { data },
     render: () => h(App),
   });
 
@@ -32,11 +32,11 @@ async function main() {
 
   app.mount('#app');
 
-  await importPNC(context);
+  await importPNC(data);
 
   {
-    for (const account of Collection.array(context.accounts)) {
-      const transactions = Collection.array(context.transactions).filter(t => context.imports[t.importId].accountId == account.id);
+    for (const account of Collection.array(data.accounts)) {
+      const transactions = Collection.array(data.transactions).filter(t => data.imports[t.importId].accountId == account.id);
 
       const total = transactions.reduce((sum, t) => sum + t.value.cents, 0);
       console.log(`${account.description}: ${Money.save({ cents: total })}`);

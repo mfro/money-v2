@@ -2,6 +2,7 @@ import { Chart, registerables } from 'chart.js';
 import { defineComponent, h, inject, Ref, shallowRef, toRef, watchEffect } from 'vue';
 import { assert } from '@mfro/assert';
 import { MoneyContext, Transaction } from '@/store';
+import { UIContext } from '@/ui/context';
 
 Chart.register(...registerables);
 
@@ -14,12 +15,11 @@ export type GraphType = 'tag' | 'month' | 'day';
 
 export default defineComponent({
   props: {
-    transactions: Array,
+    type: String,
   },
 
   setup(props) {
-    const context = inject('context');
-    const transactions = toRef(props, 'transactions') as Ref<Transaction[]>;
+    const context = inject<UIContext>('context')!;
 
     const canvas = shallowRef<null | HTMLCanvasElement>(null);
 
@@ -32,61 +32,172 @@ export default defineComponent({
       if (!canvas.value) return;
 
       const bounds = canvas.value.getBoundingClientRect()
-      const context = canvas.value.getContext('2d');
-      assert(context != null, 'context');
+      const ctx = canvas.value.getContext('2d');
+      assert(ctx != null, 'data');
 
-      const months = new Map<string, { date: Date, value: number }>();
+      if (props.type == 'by-month') {
+        const months = new Map<string, { date: Date, value: number }>();
 
-      for (const t of transactions.value) {
-        // const date = graph.type == 'day'
-        //   ? new Date(t.date.year, t.date.month - 1, t.date.day)
-        //   : new Date(t.date.year, t.date.month - 1);
-        const date = new Date(t.date.year, t.date.month - 1);
+        for (const t of context.transactions) {
+          // const date = graph.type == 'day'
+          //   ? new Date(t.date.year, t.date.month - 1, t.date.day)
+          //   : new Date(t.date.year, t.date.month - 1);
+          const date = new Date(t.date.year, t.date.month - 1);
 
-        const month = date.toLocaleDateString(undefined, {
-          year: 'numeric',
-          month: 'short',
-          // day: graph.type == 'day' ? 'numeric' : undefined,
+          const month = date.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            // day: graph.type == 'day' ? 'numeric' : undefined,
+          });
+
+          let info = months.get(month);
+          if (!info) months.set(month, info = { date, value: 0 });
+
+          info.value += t.value.cents;
+        }
+
+        const src = [...months].sort((a, b) => a[1].date.valueOf() - b[1].date.valueOf());
+        const sign = src.every(v => v[1].value < 0) ? -1 : 1;
+
+        const labels = src.map(v => v[0]);
+        const values = src.map(v => sign * v[1].value / 100);
+
+        chart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'money',
+              data: values,
+              backgroundColor: [
+                // '#a50026',
+                // '#d73027',
+                // '#f46d43',
+                // '#fdae61',
+                // '#fee08b',
+                // '#ffffbf',
+                // '#d9ef8b',
+                // '#a6d96a',
+                // '#66bd63',
+                '#1a9850',
+                // '#006837',
+              ],
+            }],
+          },
+          options: {
+            aspectRatio: bounds.width / bounds.height,
+            indexAxis: 'x',
+
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+          },
         });
+      } else if (props.type == 'by-tag') {
+        const tags = new Map<number, { name: string, value: number }>();
 
-        let info = months.get(month);
-        if (!info) months.set(month, info = { date, value: 0 });
+        for (const t of context.transactions) {
+          for (const tagId of t.tagIds) {
+            let info = tags.get(tagId);
+            if (!info) tags.set(tagId, info = { name: context.data.tags[tagId].name, value: 0 });
 
-        info.value += t.value.cents;
+            info.value += t.value.cents;
+          }
+        }
+
+        const src = [...tags].sort((a, b) => a[1].value - b[1].value);
+        const sign = src.every(v => v[1].value < 0) ? -1 : 1;
+
+        const labels = src.map(v => v[1].name);
+        const values = src.map(v => sign * v[1].value / 100);
+
+        chart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'money',
+              data: values,
+              backgroundColor: [
+                // '#a50026',
+                // '#d73027',
+                // '#f46d43',
+                // '#fdae61',
+                // '#fee08b',
+                // '#ffffbf',
+                // '#d9ef8b',
+                // '#a6d96a',
+                // '#66bd63',
+                '#1a9850',
+                // '#006837',
+              ],
+            }],
+          },
+          options: {
+            aspectRatio: bounds.width / bounds.height,
+            indexAxis: 'x',
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+          },
+        });
+      } else if (props.type == 'by-tag-unique') {
+        const tags = new Map<string, { value: number }>();
+
+        for (const t of context.transactions) {
+          const tagString = t.tagIds.map(id => context.data.tags[id].name).sort().join(' ');
+
+          let info = tags.get(tagString);
+          if (!info) tags.set(tagString, info = { value: 0 });
+
+          info.value += t.value.cents;
+        }
+
+        const src = [...tags].sort((a, b) => a[1].value - b[1].value);
+        const sign = src.every(v => v[1].value < 0) ? -1 : 1;
+
+        const labels = src.map(v => v[0]);
+        const values = src.map(v => sign * v[1].value / 100);
+
+        chart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels,
+            datasets: [{
+              label: 'money',
+              data: values,
+              backgroundColor: [
+                // '#a50026',
+                // '#d73027',
+                // '#f46d43',
+                // '#fdae61',
+                // '#fee08b',
+                // '#ffffbf',
+                // '#d9ef8b',
+                // '#a6d96a',
+                // '#66bd63',
+                '#1a9850',
+                // '#006837',
+              ],
+            }],
+          },
+          options: {
+            aspectRatio: bounds.width / bounds.height,
+            indexAxis: 'x',
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+          },
+        });
+      } else {
+        console.warn(`unknown type: ${props.type}`);
       }
-
-      const src = [...months].sort((a, b) => a[1].date.valueOf() - b[1].date.valueOf());
-
-      const labels = src.map(v => v[0]);
-      const data = src.map(v => v[1].value / 100);
-
-      chart = new Chart(context, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            label: 'money',
-            data,
-            backgroundColor: [
-              // '#a50026',
-              // '#d73027',
-              // '#f46d43',
-              // '#fdae61',
-              // '#fee08b',
-              // '#ffffbf',
-              // '#d9ef8b',
-              // '#a6d96a',
-              // '#66bd63',
-              '#1a9850',
-              // '#006837',
-            ],
-          }],
-        },
-        options: {
-          aspectRatio: bounds.width / bounds.height,
-          indexAxis: 'y',
-        },
-      });
     }
 
     return () => <canvas ref={canvas} />

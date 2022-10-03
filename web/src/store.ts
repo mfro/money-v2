@@ -38,15 +38,15 @@ export interface Tag {
   name: string;
 }
 
-function init(id: string, data: {}) {
-  const context = data as MoneyContext;
+function init(id: string, raw: {}) {
+  const data = raw as MoneyContext;
 
-  if (context.version == 2) {
+  if (data.version == 2) {
     console.log('loaded version 2');
-  } else if (context.version == 1) {
+  } else if (data.version == 1) {
     console.log('migrating version 1');
 
-    const old = context as any;
+    const old = data as any;
     delete old.labels;
 
     for (const t of Collection.array<any>(old.transactions)) {
@@ -59,18 +59,18 @@ function init(id: string, data: {}) {
       t.tagIds = [];
     }
 
-    context.version = 2;
+    data.version = 2;
   } else {
     console.log('creating repo');
 
-    context.version = 2;
-    context.accounts = Collection.create();
-    context.imports = Collection.create();
-    context.transactions = Collection.create();
-    context.tags = Collection.create();
+    data.version = 2;
+    data.accounts = Collection.create();
+    data.imports = Collection.create();
+    data.transactions = Collection.create();
+    data.tags = Collection.create();
   }
 
-  return context;
+  return data;
 }
 
 export async function open() {

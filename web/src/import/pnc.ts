@@ -205,14 +205,14 @@ function parseCreditStatement(pages: Text[][]) {
   return transactions;
 }
 
-async function importAccount(context: MoneyContext, description: string, directoryId: string, parse: (pages: Text[][]) => ParsedTransaction[]) {
-  const account = Collection.array(context.accounts).find(a => a.description == description)
-    || Collection.insert(context.accounts, { description });
+async function importAccount(data: MoneyContext, description: string, directoryId: string, parse: (pages: Text[][]) => ParsedTransaction[]) {
+  const account = Collection.array(data.accounts).find(a => a.description == description)
+    || Collection.insert(data.accounts, { description });
 
   console.log(`importing account ${account.description}`);
 
   for (const file of await readDir(directoryId)) {
-    const existing = Collection.array(context.imports).find(i => i.accountId == account.id && i.key == file.name);
+    const existing = Collection.array(data.imports).find(i => i.accountId == account.id && i.key == file.name);
     if (existing) continue;
 
     console.log(`  importing statement ${file.name}`);
@@ -228,7 +228,7 @@ async function importAccount(context: MoneyContext, description: string, directo
     const pages = await parsePDF(buffer);
     const transactions = parse(pages);
 
-    const import_ = Collection.insert(context.imports, {
+    const import_ = Collection.insert(data.imports, {
       accountId: account.id,
       description: `PDF statement ${file.name}`,
       key: file.name,
@@ -239,7 +239,7 @@ async function importAccount(context: MoneyContext, description: string, directo
       const year = statementMonth == 1 && t.date.month == 12
         ? statementYear - 1 : statementYear;
 
-      Collection.insert(context.transactions, {
+      Collection.insert(data.transactions, {
         importId: import_.id,
         label: null,
         tagIds: [],
@@ -251,7 +251,7 @@ async function importAccount(context: MoneyContext, description: string, directo
   }
 }
 
-export async function importPNC(context: MoneyContext) {
-  await importAccount(context, 'PNC Virtual Wallet Debit', '185L3i1gzhqwTbKDdgBaoawwQRZjcl1Ir', parseDebitStatement);
-  await importAccount(context, 'PNC Cash Rewards Visa Signature', '1j0Psbc39iudkTpNIBHKahPCXGzs1WD_A', parseCreditStatement);
+export async function importPNC(data: MoneyContext) {
+  await importAccount(data, 'PNC Virtual Wallet Debit', '185L3i1gzhqwTbKDdgBaoawwQRZjcl1Ir', parseDebitStatement);
+  await importAccount(data, 'PNC Cash Rewards Visa Signature', '1j0Psbc39iudkTpNIBHKahPCXGzs1WD_A', parseCreditStatement);
 }
