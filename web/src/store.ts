@@ -78,10 +78,10 @@ export async function open() {
   const idParam = url.searchParams.get('id');
 
   if (idParam) {
-    const { data } = await join('ws://box:8081', idParam);
+    const { data } = await join('wss://api.mfro.me/sync', idParam);
     return init(idParam, data);
   } else {
-    const { data, id } = await join_new('ws://box:8081');
+    const { data, id } = await join_new('wss://api.mfro.me/sync');
 
     url.searchParams.set('id', id);
     window.history.replaceState(null, '', url.toString());

@@ -23,3 +23,8 @@ plans:
 
   WS /attach?id=...
     101 { ... }
+
+features:
+  hide the ID from the URL
+  - maybe have a localStorage mapping from name -> id
+    then have name in the URL
