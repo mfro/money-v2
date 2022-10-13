@@ -101,7 +101,7 @@ export default defineComponent({
 
         for (const t of context.transactions) {
           const closure = context.tagClosureMap.get(t)!;
-          const tagString = t.tagIds.map(id => context.data.tags[id].name).sort().join(' ');
+          const tagString = t.tagIds.map(id => context.data.tags.get(id).name).sort().join(' ');
 
           let info = uniqueMap.get(tagString);
           if (!info) uniqueMap.set(tagString, info = { closure, value: 0 });

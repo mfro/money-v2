@@ -25,6 +25,8 @@ plans:
     101 { ... }
 
 features:
-  hide the ID from the URL
+- hide the ID from the URL
   - maybe have a localStorage mapping from name -> id
     then have name in the URL
+- split expenses
+  - ratio

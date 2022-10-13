@@ -43,7 +43,7 @@
              @click="e => onClickTransaction(t, e)">
           <span>{{t.date.year}}-{{t.date.month}}-{{t.date.day}}</span>
           <span>{{t.tagIds.map(id =>
-          context.data.tags[id].name).sort().join(space)}}</span>
+          context.data.tags.get(id).name).sort().join(space)}}</span>
           <span>{{t.label ?? t.description}}</span>
           <span style="justify-self: end">{{Money.save(t.value)}}</span>
         </div>
@@ -59,7 +59,6 @@ import { computed, inject, shallowRef, shallowReactive } from 'vue';
 import { Money } from '@/common';
 
 import AutocompleteField from './AutocompleteField.vue';
-import { UIContext } from './context';
 
 const space = ' ';
 
@@ -78,7 +77,7 @@ const textFieldMatch = computed(() => {
     if (!textFieldInput.value)
       return;
 
-    const matches = Collection.array(data.tags).map(c => {
+    const matches = data.tags.array().map(c => {
       const index = norm(c.name).indexOf(textFieldInput.value);
       if (index == -1)
         return null;
@@ -208,7 +207,7 @@ function onKeyDownTextField(e) {
 }
 
 function createTag() {
-  return Collection.insert(data.tags, {
+  return data.tags.insert({
     name: textFieldInput.value,
     tagIds: [],
   });

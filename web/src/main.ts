@@ -35,8 +35,8 @@ async function main() {
   await importPNC(data);
 
   {
-    for (const account of Collection.array(data.accounts)) {
-      const transactions = Collection.array(data.transactions).filter(t => data.imports[t.importId].accountId == account.id);
+    for (const account of data.accounts.array()) {
+      const transactions = data.transactions.array().filter(t => data.imports.get(t.importId).accountId == account.id);
 
       const total = transactions.reduce((sum, t) => sum + t.value.cents, 0);
       console.log(`${account.description}: ${Money.save({ cents: total })}`);

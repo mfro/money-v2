@@ -20,7 +20,6 @@
 </template>
 
 <script setup>
-import { Collection } from '@mfro/sync-vue';
 import { computed, inject } from 'vue';
 
 import { Money } from '@/common';
@@ -28,7 +27,7 @@ import { Money } from '@/common';
 const context = inject('context');
 
 const tags = computed(() =>
-  Collection.array(context.data.tags)
+  context.data.tags.array()
     .map(tag => ({
       tag,
       value: context.tagValueMap.get(tag)

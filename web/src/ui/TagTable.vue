@@ -43,7 +43,7 @@
              @click="e => onClickTag(t, e)">
           <span>{{t.name}}</span>
           <span>{{t.tagIds.map(id =>
-          context.data.tags[id].name).sort().join(space)}}</span>
+          context.data.tags.get(id).name).sort().join(space)}}</span>
           <span
                 style="justify-self: end">{{Money.save(context.tagValueMap.get(t))}}</span>
         </div>
@@ -53,7 +53,6 @@
 </template>
 
 <script setup>
-import { Collection } from '@mfro/sync-vue';
 import { computed, inject, shallowRef, shallowReactive } from 'vue';
 
 import { Money } from '@/common';
@@ -79,7 +78,7 @@ const textFieldMatch = computed(() => {
     if (!textFieldInput.value)
       return;
 
-    const matches = Collection.array(data.tags).map(c => {
+    const matches = data.tags.array().map(c => {
       const index = norm(c.name).indexOf(textFieldInput.value);
       if (index == -1)
         return null;
@@ -199,7 +198,7 @@ function onKeyDownTextField(e) {
 }
 
 function createTag() {
-  return Collection.insert(data.tags, {
+  return data.tags.insert({
     name: textFieldInput.value,
     tagIds: [],
   });

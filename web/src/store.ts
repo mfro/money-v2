@@ -23,8 +23,8 @@ export interface Import {
 
 export interface Transaction {
   importId: number;
+  // parts: TransactionPart[];
   tagIds: number[];
-
   label: string | null;
 
   date: Date;
@@ -32,8 +32,15 @@ export interface Transaction {
   value: Money;
 }
 
+// export interface TransactionPart {
+//   tagIds: number[];
+//   label: string | null;
+//   ratio: number
+// }
+
 export interface Tag {
   tagIds: number[];
+  // tagIds: Collection<number>;
 
   name: string;
 }
@@ -49,13 +56,13 @@ function init(id: string, raw: {}) {
     const old = data as any;
     delete old.labels;
 
-    for (const t of Collection.array<any>(old.transactions)) {
+    for (const t of old.transactions) {
       delete t.labelId;
       t.tagIds = [];
       t.label = null;
     }
 
-    for (const t of Collection.array<any>(old.tags)) {
+    for (const t of old.tags) {
       t.tagIds = [];
     }
 

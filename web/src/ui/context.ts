@@ -1,5 +1,5 @@
 import { Money } from '@/common';
-import { Collection, MoneyContext, Tag, Transaction } from '@/store';
+import { MoneyContext, Tag, Transaction } from '@/store';
 import { computed, reactive, shallowRef } from 'vue';
 
 import { Filter } from './filter';
@@ -16,10 +16,10 @@ function allTags(data: MoneyContext, t: Transaction | Tag) {
 
   while (queue.length > 0) {
     const id = queue.shift()!;
-    const next = data.tags[id];
+    const next = data.tags.get(id);
 
     set.add(next);
-    queue.push(...next.tagIds.filter(id => !set.has(data.tags[id])));
+    queue.push(...next.tagIds.filter(id => !set.has(data.tags.get(id))));
   }
 
   return set;
@@ -42,24 +42,24 @@ export namespace UIContext {
     const filter = shallowRef(Filter.empty());
 
     const tags = computed(() =>
-      Collection.array(data.tags)
+      data.tags.array()
         .filter(Filter.fn(context, filter.value))
     );
 
     const transactions = computed(() =>
-      Collection.array(data.transactions)
+      data.transactions.array()
         .filter(Filter.fn(context, filter.value))
     );
 
     const tagClosureMap = computed(() =>
       new Map<Tag | Transaction, Set<Tag>>([
-        ...Collection.array(data.tags).map(t => [t, allTags(data, t)] as const),
-        ...Collection.array(data.transactions).map(t => [t, allTags(data, t)] as const),
+        ...data.tags.array().map(t => [t, allTags(data, t)] as const),
+        ...data.transactions.array().map(t => [t, allTags(data, t)] as const),
       ])
     );
 
     const tagValueMap = computed(() =>
-      new Map(Collection.array(data.tags).map(tag => [
+      new Map(data.tags.array().map(tag => [
         tag,
         {
           cents: transactions.value
@@ -69,7 +69,7 @@ export namespace UIContext {
       ]))
     );
 
-    const context: UIContext = reactive({
+    const context = reactive({
       data,
       filter,
 
@@ -78,7 +78,7 @@ export namespace UIContext {
 
       tagClosureMap,
       tagValueMap,
-    });
+    }) as unknown as UIContext;
 
     return context;
   }

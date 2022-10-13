@@ -16,8 +16,8 @@ export namespace Filter {
   export function fn(context: UIContext, filter: Filter) {
     return (value: Transaction | Tag) => {
       const closure = context.tagClosureMap.get(value)!;
-      return (!filter.includeTags?.length || filter.includeTags.every(id => closure.has(context.data.tags[id])))
-        && (!filter.excludeTags || filter.excludeTags.every(id => !closure.has(context.data.tags[id])));
+      return (!filter.includeTags?.length || filter.includeTags.every(id => closure.has(context.data.tags.get(id))))
+        && (!filter.excludeTags || filter.excludeTags.every(id => !closure.has(context.data.tags.get(id))));
     };
   }
 
