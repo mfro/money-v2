@@ -42,8 +42,8 @@
              :class="{ active: selection.includes(t) }"
              @click="e => onClickTag(t, e)">
           <span>{{t.name}}</span>
-          <span>{{t.tagIds.map(id =>
-          context.data.tags.get(id).name).sort().join(space)}}</span>
+          <span>{{t.tags.array().map(tag =>
+          tag.name).sort().join(space)}}</span>
           <span
                 style="justify-self: end">{{Money.save(context.tagValueMap.get(t))}}</span>
         </div>
@@ -54,6 +54,7 @@
 
 <script setup>
 import { computed, inject, shallowRef, shallowReactive } from 'vue';
+import { Collection } from '@mfro/sync-vue';
 
 import { Money } from '@/common';
 
@@ -141,7 +142,7 @@ function autoSelect(skip = false, reverse = false) {
     ? sortedTags.value.slice(index + 1)
     : sortedTags.value.slice(0, index == -1 ? sortedTags.value.length : index).reverse();
 
-  const next = list.find(t => skip && t.tagIds.length == 0) ?? list[0];
+  const next = list.find(t => skip && t.tags.array().length == 0) ?? list[0];
 
   selection.length = 0;
   selection.push(next);
@@ -200,19 +201,19 @@ function onKeyDownTextField(e) {
 function createTag() {
   return data.tags.insert({
     name: textFieldInput.value,
-    tagIds: [],
+    tags: Collection.create(),
   });
 }
 
 function addTag(tag) {
-  const add = !selection[0].tagIds.includes(tag.id);
-  for (const target of selection) {
-    if (add) {
-      target.tagIds = [...target.tagIds, tag.id];
-    } else {
-      target.tagIds = target.tagIds.filter(id => id != tag.id);
-    }
-  }
+  // const add = !selection[0].tags.array().includes(tag);
+  // for (const target of selection) {
+  //   if (add) {
+  //     target.tagIds = [...target.tagIds, tag.id];
+  //   } else {
+  //     target.tagIds = target.tagIds.filter(id => id != tag.id);
+  //   }
+  // }
 }
 
 function norm(s) {

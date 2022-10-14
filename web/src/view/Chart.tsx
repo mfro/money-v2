@@ -1,7 +1,7 @@
 import { Chart, registerables } from 'chart.js';
-import { defineComponent, h, inject, Ref, shallowRef, toRef, watchEffect } from 'vue';
+import { defineComponent, inject, shallowRef, watchEffect } from 'vue';
 import { assert } from '@mfro/assert';
-import { MoneyContext, Tag, Transaction } from '@/store';
+import { Tag } from '@/store';
 import { UIContext } from '@/ui/context';
 
 Chart.register(...registerables);
@@ -38,7 +38,7 @@ export default defineComponent({
       if (props.type == 'by-month') {
         const months = new Map<string, { date: Date, value: number }>();
 
-        for (const t of context.transactions) {
+        for (const [t, p] of context.parts) {
           // const date = graph.type == 'day'
           //   ? new Date(t.date.year, t.date.month - 1, t.date.day)
           //   : new Date(t.date.year, t.date.month - 1);
@@ -53,7 +53,7 @@ export default defineComponent({
           let info = months.get(month);
           if (!info) months.set(month, info = { date, value: 0 });
 
-          info.value += t.value.cents;
+          info.value += context.partValueMap.get(p)!.cents;
         }
 
         const src = [...months].sort((a, b) => a[1].date.valueOf() - b[1].date.valueOf());
@@ -99,14 +99,14 @@ export default defineComponent({
         const roots = new Set<Tag>();
         const uniqueMap = new Map<string, { closure: Set<Tag>, value: number }>();
 
-        for (const t of context.transactions) {
-          const closure = context.tagClosureMap.get(t)!;
-          const tagString = t.tagIds.map(id => context.data.tags.get(id).name).sort().join(' ');
+        for (const [_, p] of context.parts) {
+          const closure = context.tagClosureMap.get(p)!;
+          const tagString = p.tags.array().map(tag => tag.name).sort().join(' ');
 
           let info = uniqueMap.get(tagString);
           if (!info) uniqueMap.set(tagString, info = { closure, value: 0 });
 
-          info.value += t.value.cents;
+          info.value += context.partValueMap.get(p)!.cents;
           for (const tag of closure) roots.add(tag);
         }
 
@@ -178,14 +178,14 @@ export default defineComponent({
       } else if (props.type == 'by-tag-unique') {
         const tags = new Map<string, { value: number }>();
 
-        for (const t of context.transactions) {
-          const tagString = [...context.tagClosureMap.get(t)!]
+        for (const [t, p] of context.parts) {
+          const tagString = [...context.tagClosureMap.get(p)!]
             .map(tag => tag.name).sort().join(' ');
 
           let info = tags.get(tagString);
           if (!info) tags.set(tagString, info = { value: 0 });
 
-          info.value += t.value.cents;
+          info.value += context.partValueMap.get(p)!.cents;
         }
 
         const src = [...tags].sort((a, b) => a[1].value - b[1].value);

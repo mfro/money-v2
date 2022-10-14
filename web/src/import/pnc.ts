@@ -207,12 +207,12 @@ function parseCreditStatement(pages: Text[][]) {
 
 async function importAccount(data: MoneyContext, description: string, directoryId: string, parse: (pages: Text[][]) => ParsedTransaction[]) {
   const account = data.accounts.array().find(a => a.description == description)
-    || data.accounts.insert({ description });
+    || data.accounts.insert({ description, imports: Collection.create(), transactions: Collection.create() });
 
   console.log(`importing account ${account.description}`);
 
   for (const file of await readDir(directoryId)) {
-    const existing = data.imports.array().find(i => i.accountId == account.id && i.key == file.name);
+    const existing = account.imports.array().find(i => i.key == file.name);
     if (existing) continue;
 
     console.log(`  importing statement ${file.name}`);
@@ -228,8 +228,8 @@ async function importAccount(data: MoneyContext, description: string, directoryI
     const pages = await parsePDF(buffer);
     const transactions = parse(pages);
 
-    const import_ = data.imports.insert({
-      accountId: account.id,
+    const import_ = account.imports.insert({
+      account: account,
       description: `PDF statement ${file.name}`,
       key: file.name!,
     });
@@ -239,14 +239,18 @@ async function importAccount(data: MoneyContext, description: string, directoryI
       const year = statementMonth == 1 && t.date.month == 12
         ? statementYear - 1 : statementYear;
 
-      data.transactions.insert({
-        importId: import_.id,
-        // parts: [],
-        label: null,
-        tagIds: [],
+      const result = account.transactions.insert({
+        import: import_,
+        parts: Collection.create(),
         date: { ...t.date, year },
         description: t.description,
         value: t.value,
+      });
+
+      result.parts.insert({
+        label: null,
+        ratio: 1,
+        tags: Collection.create(),
       });
     }
   }

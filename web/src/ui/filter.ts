@@ -1,6 +1,6 @@
 import { Ref, watch } from 'vue';
 
-import { Tag, Transaction } from '@/store';
+import { Tag, TransactionPart } from '@/store';
 import { UIContext } from './context';
 
 export interface Filter {
@@ -14,7 +14,7 @@ export namespace Filter {
   }
 
   export function fn(context: UIContext, filter: Filter) {
-    return (value: Transaction | Tag) => {
+    return (value: TransactionPart | Tag) => {
       const closure = context.tagClosureMap.get(value)!;
       return (!filter.includeTags?.length || filter.includeTags.every(id => closure.has(context.data.tags.get(id))))
         && (!filter.excludeTags || filter.excludeTags.every(id => !closure.has(context.data.tags.get(id))));

@@ -33,7 +33,8 @@ const tags = computed(() =>
       value: context.tagValueMap.get(tag)
     }))
     .sort((a, b) => {
-      return -(a.value.cents - b.value.cents);
+      return -(a.value.cents - b.value.cents)
+        || a.tag.name.localeCompare(b.tag.name);
     })
 );
 
