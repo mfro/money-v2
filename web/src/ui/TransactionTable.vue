@@ -18,30 +18,24 @@
                            ref="editField" />
       </template>
       <template v-else>
-        <v-text-field :model-value="context.filter.search"
-                      @update:model-value="v => context.filter = { ...context.filter, search: v }"
-                      solo
-                      class="mt-0"
-                      style="flex: 1 1 0" />
+        <v-flex grow>
+          <span>
+            {{ transactions.length}} transactions =
+            {{ Money.save(total)}}
+          </span>
+
+          <span class="ml-6"
+                v-if="selection.length > 0">
+            {{ selection.length}} selected =
+            {{ Money.save(selectionTotal)}}
+          </span>
+        </v-flex>
       </template>
 
       <v-select class="mt-0 ml-3"
                 :options="sortOptions"
                 :text="o => o.label"
                 v-model="sort" />
-    </v-flex>
-
-    <v-flex class="stats mb-3">
-      <span>
-        {{ transactions.length}} transactions =
-        {{ Money.save(total)}}
-      </span>
-
-      <span class="ml-6"
-            v-if="selection.length > 0">
-        {{ selection.length}} selected =
-        {{ Money.save(selectionTotal)}}
-      </span>
     </v-flex>
 
     <div class="transactions mb-3"
@@ -248,7 +242,6 @@ function norm(s) {
 @import "@mfro/vue-ui/src/style.scss";
 
 .transactions {
-  border-radius: 3px;
   display: grid;
   overflow: auto;
   grid-template-columns: repeat(4, auto);

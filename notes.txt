@@ -1,32 +1,7 @@
-ideas:
-  attach
-  detach
-  update
-
-node:
-  /new
-  /attach?id=...
-
-namespacing:
-  attach is a json path
-  would need some sort of access control
-  otherwise joining the root would show everything
-
-plans:
-  use node approach
-  rust probably
-  sqlite / mongodb
-  consider for the future node ref type to allow referencing other nodes
-
-  POST /new create node & return id
-    201 { "id": "..." }
-
-  WS /attach?id=...
-    101 { ... }
-
 features:
 - hide the ID from the URL
   - maybe have a localStorage mapping from name -> id
     then have name in the URL
 - split expenses
   - ratio
+- date filtering

@@ -26,27 +26,18 @@
 </template>
 
 <script setup>
-import { inject, provide, toRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-
-import { UIContext } from '@/ui/context';
-import { Filter } from '@/ui/filter';
-
-// const data = inject('data');
-
-// const context = UIContext.create(data);
-// provide('context', context);
-
-// Filter.attachToUrl(toRef(context, 'filter'));
+import { withQuery } from '@/util';
 
 const route = useRoute();
 const router = useRouter();
 
 function updateFilter(f) {
-  router.replace({
-    ...route,
-    query: { ...route.query, filter: JSON.stringify(f) },
-  })
+  const filter = JSON.stringify(f);
+
+  router.replace(withQuery(route, { filter }));
+
+  localStorage.setItem('mfro:money:filter', filter);
 }
 </script>
 
@@ -63,9 +54,6 @@ function updateFilter(f) {
 .root {
   max-height: 100vh;
   overflow: hidden;
-  // display: grid !important;
-  // grid-template-rows: minmax(auto, 100vh);
-  // grid-template-columns: 20em 1fr 1fr;
 }
 
 .content {

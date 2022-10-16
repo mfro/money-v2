@@ -9,12 +9,6 @@
       <span>{{ tag.name }}</span>
 
       <span style="justify-self: end">{{ Money.save(value) }}</span>
-
-      <!-- <v-button icon
-                x-small
-                @click="deleteTag(tag)">
-        <v-icon>delete</v-icon>
-      </v-button> -->
     </div>
   </div>
 </template>
@@ -38,16 +32,6 @@ const tags = computed(() =>
     })
 );
 
-// function deleteTag(tag) {
-//   for (const t of Collection.array(data.transactions)) {
-//     if (t.tagIds.includes(tag.id)) {
-//       t.tagIds = t.tagIds.filter(id => id != tag.id);
-//     }
-//   }
-
-//   Collection.remove(data.tags, tag.id);
-// }
-
 function toggleTag(key, tag) {
   const list = context.filter[key]?.slice() ?? [];
 
@@ -68,7 +52,6 @@ function onClickTag(tag, e) {
 function onRightClickTag(tag, e) {
   toggleTag('excludeTags', tag);
 }
-
 </script>
 
 <style scoped lang="scss">

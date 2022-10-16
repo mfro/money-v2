@@ -1,11 +1,6 @@
 <template>
   <v-flex style="height: 100%; overflow: hidden;">
-    <v-flex column
-            class="mr-3"
-            style="flex: 0 0 18em">
-
-      <TagFilter class="mb-3" />
-    </v-flex>
+    <FilterEditor />
 
     <TagTable />
 
@@ -15,31 +10,28 @@
              type="by-tag" />
 
       <Chart style="flex: 1 1 0"
-               type="by-tag-unique" />
+             type="by-tag-unique" />
     </v-flex>
   </v-flex>
 </template>
 
 <script setup>
-import { computed, inject, provide } from 'vue';
+import { inject, provide } from 'vue';
 
+import { bindModel } from '@/util';
 import { UIContext } from '@/ui/context';
 
 import Chart from '../ui/Chart';
-import TagFilter from '@/ui/TagFilter.vue';
+import FilterEditor from '@/ui/Filter/FilterEditor.vue';
 import TagTable from '../ui/TagTable.vue';
 
 const data = inject('data');
 
 const emit = defineEmits(['update:filter']);
 const props = defineProps({
-  filter: Object,
+  filter: { type: Object, default: {} },
 });
 
-const context = UIContext.create(data, computed({
-  get: () => props.filter ?? {},
-  set: v => emit('update:filter', v),
-}));
-
+const context = UIContext.create(data, bindModel('filter'));
 provide('context', context);
 </script>

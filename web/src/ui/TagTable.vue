@@ -225,7 +225,6 @@ function norm(s) {
 @import "@mfro/vue-ui/src/style.scss";
 
 .tags {
-  border-radius: 3px;
   display: grid;
   overflow: auto;
   grid-template-columns: repeat(3, auto);
