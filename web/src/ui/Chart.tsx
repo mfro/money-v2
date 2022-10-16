@@ -423,7 +423,7 @@ export default defineComponent({
 
                 return (
                   <v-tooltip text={`${m[0]} ${e[0].name}: ${Money.save({ cents })}`}>
-                    <div class="cell" style={{ color: palette[0], height: `${cents / 1000}px` }}
+                    <div class="cell" style={{ color: palette[9], height: `${cents / 1000}px` }}
                       onClick={() => inspect(m[1].date, e[0])} />
                   </v-tooltip>
                 );

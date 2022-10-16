@@ -6,7 +6,7 @@
       <v-flex class="mt-3">
         <template v-for="route in routes">
           <v-button icon
-                    @click="navigate(route.path)"
+                    @click="navigate(route)"
                     :class="['ml-3', { isActive: $route.path == route.path }]">
             <v-icon>{{route.icon}}</v-icon>
           </v-button>
@@ -39,20 +39,31 @@ const routes = [
   {
     path: '/tags',
     icon: 'sell',
+    filter: true,
   },
   {
     path: '/transactions',
     icon: 'receipt',
+    filter: true,
+  },
+  {
+    path: '/labeling',
+    icon: 'edit',
   },
 ]
 
-function navigate(path) {
-  router.push({
-    path,
-    query: {
+function navigate(info) {
+  const route = {
+    path: info.path,
+  };
+
+  if (info.filter) {
+    route.query = {
       filter: JSON.stringify(context.filter),
-    },
-  });
+    };
+  }
+
+  router.push(route);
 }
 </script>
 
@@ -79,18 +90,16 @@ function navigate(path) {
   z-index: 1;
 }
 
-.toolbar {
-  .v-button {
-    border-bottom-left-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
-    box-shadow: none !important;
-    background-color: #ddd !important;
+.v-button {
+  // border-bottom-left-radius: 0 !important;
+  // border-bottom-right-radius: 0 !important;
+  // box-shadow: none !important;
+  // background-color: #ddd !important;
 
-    &.isActive {
-      color: $primary !important;
-      box-shadow: 0 0 8px rgba(61, 56, 56, 0.25) !important;
-      background-color: white !important;
-    }
+  &.isActive {
+    color: $primary !important;
+    // box-shadow: 0 0 8px rgba(61, 56, 56, 0.25) !important;
+    // background-color: white !important;
   }
 }
 </style>

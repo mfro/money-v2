@@ -13,16 +13,5 @@
 
 <script setup>
 import Chart from '../../ui/Chart';
-import FilterEditor from '@/ui/Filter/FilterEditor.vue';
 import TagTable from '../../ui/TagTable.vue';
-
-// const data = inject('data');
-
-// const emit = defineEmits(['update:filter']);
-// const props = defineProps({
-//   filter: { type: Object, default: {} },
-// });
-
-// const context = UIContext.create(data, bindModel('filter'));
-// provide('context', context);
 </script>

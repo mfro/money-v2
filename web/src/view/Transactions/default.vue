@@ -5,14 +5,14 @@
 
     <v-flex v-if="chart"
             column
-            style="flex: 4 1 0"
+            style="flex: 4 1 0;  overflow: auto"
             :key="table + chart">
 
       <Chart type="by-month"
-             style="flex: 1 1 0" />
+             style="flex: 0 0 auto" />
 
       <Chart type="spectrum"
-             style="flex: 1 1 0" />
+             style="flex: 0 0 auto" />
     </v-flex>
   </v-flex>
 </template>

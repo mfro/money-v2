@@ -1,33 +1,10 @@
-import { createRouter, createWebHashHistory, RouteLocation } from 'vue-router';
-
-import { Filter } from './ui/filter';
+import { createRouter, createWebHashHistory } from 'vue-router';
 
 import Tags_default from '@/view/Tags/default.vue';
 import Tags_sidebar from '@/view/Tags/sidebar.vue';
 import Transactions_default from '@/view/Transactions/default.vue';
 import Transactions_sidebar from '@/view/Transactions/sidebar.vue';
-
-// function getFilter(route: RouteLocation) {
-//   const str = route.query['filter']
-//     || localStorage.getItem('mfro:money:filter');
-
-//   if (typeof str == 'string') {
-//     return JSON.parse(str);
-//   } else {
-//     return Filter.empty();
-//   }
-// }
-
-// function getSaved(route: RouteLocation, name: string) {
-//   const str = route.query[name]
-//     || localStorage.getItem(`mfro:money:${route.path}:${name}`);
-
-//   if (typeof str == 'string') {
-//     return JSON.parse(str);
-//   } else {
-//     return undefined
-//   }
-// }
+import Labeling_default from '@/view/Labeling/default.vue';
 
 export const router = createRouter({
   history: createWebHashHistory(),
@@ -45,6 +22,12 @@ export const router = createRouter({
       components: {
         default: Transactions_default,
         sidebar: Transactions_sidebar,
+      },
+    },
+    {
+      path: '/labeling',
+      components: {
+        default: Labeling_default,
       },
     },
   ],
