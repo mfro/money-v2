@@ -1,11 +1,12 @@
 import { Ref, watch } from 'vue';
 
-import { Tag, TransactionPart } from '@/store';
+import { Tag, Transaction } from '@/store';
 import { UIContext } from './context';
 
 export interface Filter {
-  includeTags?: number[];
-  excludeTags?: number[];
+  search?: string;
+  includeTags?: string[];
+  excludeTags?: string[];
 }
 
 export namespace Filter {
@@ -14,10 +15,18 @@ export namespace Filter {
   }
 
   export function fn(context: UIContext, filter: Filter) {
-    return (value: TransactionPart | Tag) => {
-      const closure = context.tagClosureMap.get(value)!;
-      return (!filter.includeTags?.length || filter.includeTags.every(id => closure.has(context.data.tags.get(id))))
-        && (!filter.excludeTags || filter.excludeTags.every(id => !closure.has(context.data.tags.get(id))));
+    const regex = filter.search && new RegExp(filter.search, 'i');
+
+    return (value: Transaction | Tag) => {
+      const closureArray = [...context.tagClosureMap.get(value)!].map(t => t.name);
+      const closureSet = new Set([...context.tagClosureMap.get(value)!].map(t => t.name));
+
+      return (!filter.includeTags?.length || filter.includeTags.every(name => closureSet.has(name)))
+        && (!filter.excludeTags?.length || filter.excludeTags.every(name => !closureSet.has(name)))
+        && (!regex || (
+          closureArray.some(t => regex.test(t))
+          || 'label' in value && regex.test(value.label)
+        ))
     };
   }
 

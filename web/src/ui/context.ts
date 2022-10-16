@@ -1,15 +1,15 @@
 import { Money } from '@/common';
-import { MoneyContext, Tag, Transaction, TransactionPart } from '@/store';
-import { computed, reactive, shallowRef } from 'vue';
+import { MoneyContext, Tag, Transaction } from '@/store';
+import { computed, reactive, Ref, shallowRef } from 'vue';
 
 import { Filter } from './filter';
 
-function allTags(data: MoneyContext, t: TransactionPart | Tag) {
+function tagClosure(data: MoneyContext, t: Transaction | Tag) {
   const set = new Set<Tag>();
 
   const queue: Tag[] = [];
   if ('label' in t) {
-    queue.push(...t.tags.array());
+    queue.push(...t.tags);
   } else {
     queue.push(t);
   }
@@ -30,48 +30,28 @@ export interface UIContext {
   filter: Filter;
 
   tags: Tag[];
-  parts: [Transaction, TransactionPart][];
   transactions: Transaction[];
 
-  tagClosureMap: Map<Tag | TransactionPart, Set<Tag>>,
+  tagClosureMap: Map<Tag | Transaction, Set<Tag>>,
   tagValueMap: Map<Tag, Money>;
-  partValueMap: Map<TransactionPart, Money>;
 }
 
 export namespace UIContext {
-  export function create(data: MoneyContext): UIContext {
-    const filter = shallowRef(Filter.empty());
-
+  export function create(data: MoneyContext, filter: Ref<Filter>): UIContext {
     const tags = computed(() =>
       data.tags.array()
         .filter(Filter.fn(context, filter.value))
     );
 
-    const parts = computed(() =>
-      data.accounts.array()
-        .flatMap(a => a.transactions.array())
-        .flatMap(t => t.parts.array().map(p => [t, p] as const))
-        .filter(pair => Filter.fn(context, filter.value)(pair[1]))
+    const transactions = computed(() =>
+      data.transactions.array()
+        .filter(Filter.fn(context, filter.value))
     );
 
     const tagClosureMap = computed(() =>
-      new Map<Tag | TransactionPart, Set<Tag>>([
-        ...data.tags.array().map(t => [t, allTags(data, t)] as const),
-        ...data.accounts.array()
-          .flatMap(a => a.transactions.array())
-          .flatMap(a => a.parts.array())
-          .map(t => [t, allTags(data, t)] as const),
-      ])
-    );
-
-    const partValueMap = computed(() =>
-      new Map(
-        data.accounts.array()
-          .flatMap(a => a.transactions.array())
-          .flatMap(t => {
-            const total = t.parts.array().reduce((sum, p) => sum + p.ratio, 0);
-            return t.parts.array().map(p => [p, { cents: p.ratio / total * t.value.cents }]);
-          })
+      new Map<Tag | Transaction, Set<Tag>>(
+        [...data.tags, ...data.transactions]
+          .map(t => [t, tagClosure(data, t)] as const),
       )
     );
 
@@ -79,9 +59,9 @@ export namespace UIContext {
       new Map(data.tags.array().map(tag => [
         tag,
         {
-          cents: parts.value
-            .filter(t => Filter.fn(context, { includeTags: [tag.id] })(t[1]))
-            .reduce((sum, t) => sum + partValueMap.value.get(t[1])!.cents, 0),
+          cents: transactions.value
+            .filter(Filter.fn(context, { includeTags: [tag.name] }))
+            .reduce((sum, t) => sum + t.value.cents, 0),
         },
       ]))
     );
@@ -91,11 +71,10 @@ export namespace UIContext {
       filter,
 
       tags,
-      parts,
+      transactions,
 
       tagClosureMap,
       tagValueMap,
-      partValueMap,
     }) as unknown as UIContext;
 
     return context;

@@ -1,11 +1,12 @@
 import { createApp, h } from 'vue'
 import { framework } from '@mfro/vue-ui';
+import { assert } from '@mfro/assert';
 
 import App from './view/App.vue';
 import type * as pdfjson from 'pdfjs-dist';
 
 import { importPNC } from './import/pnc';
-import { open, Collection, Transaction, Tag, MoneyContext } from './store';
+import { open, Collection, Transaction, Tag, MoneyContext, makeRef } from './store';
 import { Date, Money } from './common';
 
 const pdfjs: typeof pdfjson = (window as any).pdfjsLib;
@@ -25,7 +26,7 @@ main();
 // }
 
 import old from './old.json';
-import { assert } from '@mfro/assert';
+import { router } from './routing';
 
 async function main() {
   const data = await open();
@@ -42,6 +43,7 @@ async function main() {
 
   app.config.unwrapInjectedRef = true;
 
+  app.use(router);
   app.use(framework);
 
   app.mount('#app');
@@ -49,9 +51,8 @@ async function main() {
   await importPNC(data);
 
   {
-    for (const account of data.accounts.array()) {
-      const transactions = account.transactions.array();
-
+    for (const account of data.accounts) {
+      const transactions = account.statements.array().flatMap(i => i.transactions.array());
       const total = transactions.reduce((sum, t) => sum + t.value.cents, 0);
       console.log(`${account.description}: ${Money.save({ cents: total })}`);
 
@@ -61,23 +62,34 @@ async function main() {
       }
     }
 
-    for (const account of data.accounts.array()) {
-      const mAccount = array(old.state.accounts).find(a => a.description == account.description);
-      assert(mAccount != null, 'x');
+    // for (const account of data.accounts) {
+    //   const mAccount = array(old.state.accounts).find(a => a.description == account.description);
+    //   assert(mAccount != null, 'x');
 
-      for (const t of account.transactions.array()) {
-        const mTransaction = array(old.state.transactions).filter(f => t.description == f.description && Date.eq(t.date, f.date) && t.value.cents == f.value.cents);
-        assert(mTransaction.length > 0, 'x');
-        assert(mTransaction.every(t => JSON.stringify(t.tagIds) == JSON.stringify(mTransaction[0].tagIds)), 'x');
+    //   const transactions = account.statements.array().flatMap(i => i.transactions.array());
 
-        for (const id of mTransaction[0].tagIds) {
-          const src = (old.state.tags as any)[id];
-          addTag(data, t, src);
-        }
-      }
-    }
+    //   for (const t of transactions) {
+    //     const existing = data.transactions.array().find(x => x.source.type == 'pnc' && x.source.source == t);
+    //     if (existing) continue;
 
-    console.log('done');
+    //     const mTransaction = array(old.state.transactions).filter(f => t.description == f.description && Date.eq(t.date, f.date) && t.value.cents == f.value.cents);
+    //     assert(mTransaction.length > 0, 'x');
+    //     assert(mTransaction.every(t => JSON.stringify(t.tagIds) == JSON.stringify(mTransaction[0].tagIds)), 'x');
+
+    //     const transaction = data.transactions.insert({
+    //       date: { ...t.date },
+    //       label: t.description,
+    //       source: { type: 'pnc', source: makeRef(t) },
+    //       tags: Collection.create(),
+    //       value: { ...t.value },
+    //     });
+
+    //     for (const id of mTransaction[0].tagIds) {
+    //       const src = (old.state.tags as any)[id];
+    //       addTag(data, transaction, src);
+    //     }
+    //   }
+    // }
   }
 }
 
@@ -95,11 +107,7 @@ function addTag(data: MoneyContext, t: Tag | Transaction, src: typeof old.state.
     }
   }
 
-  if ('parts' in t) {
-    t.parts.get(0).tags.insert(tag);
-  } else {
-    t.tags.insert(tag);
-  }
+  t.tags.insert(tag);
 }
 
 function array<T>(o: { nextId: number, '0': T }): T[] {

@@ -3,7 +3,7 @@
     <div v-for="{ tag, value } in tags"
          class="tag"
          align-center
-         :class="{ include: context.filter.includeTags?.includes(tag.id), exclude: context.filter.excludeTags?.includes(tag.id) }"
+         :class="{ include: context.filter.includeTags?.includes(tag.name), exclude: context.filter.excludeTags?.includes(tag.name) }"
          @click="e => onClickTag(tag, e)"
          @contextmenu.prevent="e => onRightClickTag(tag, e)">
       <span>{{ tag.name }}</span>
@@ -51,9 +51,9 @@ const tags = computed(() =>
 function toggleTag(key, tag) {
   const list = context.filter[key]?.slice() ?? [];
 
-  const index = list.indexOf(tag.id);
+  const index = list.indexOf(tag.name);
   if (index == -1) {
-    list.push(tag.id);
+    list.push(tag.name);
   } else {
     list.splice(index, 1);
   }

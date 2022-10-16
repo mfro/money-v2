@@ -10,11 +10,20 @@
         <v-icon>edit</v-icon>
       </v-button>
 
-      <AutocompleteField v-model="textFieldInput"
-                         :match="textFieldMatch?.name"
-                         style="flex: 1 1 0"
-                         @keydown="onKeyDownTextField"
-                         ref="textField" />
+      <template v-if="mode == 'edit'">
+        <AutocompleteField v-model="editFieldInput"
+                           :match="editFieldMatch?.name"
+                           style="flex: 1 1 0"
+                           @keydown="onKeyDownEditField"
+                           ref="editField" />
+      </template>
+      <template v-else>
+        <v-text-field :model-value="context.filter.search"
+                      @update:model-value="v => context.filter = { ...context.filter, search: v }"
+                      solo
+                      class="mt-0"
+                      style="flex: 1 1 0" />
+      </template>
 
       <v-select class="mt-0 ml-3"
                 :options="sortOptions"
@@ -24,7 +33,7 @@
 
     <v-flex class="stats mb-3">
       <span>
-        {{ parts.length}} transactions =
+        {{ transactions.length}} transactions =
         {{ Money.save(total)}}
       </span>
 
@@ -37,15 +46,15 @@
 
     <div class="transactions mb-3"
          ref="transactionGrid">
-      <template v-for="[t, p] in parts">
+      <template v-for="t in transactions">
         <div class="transaction"
              :class="{ active: selection.includes(t) }"
              @click="e => onClickTransaction(t, e)">
           <span>{{t.date.year}}-{{t.date.month}}-{{t.date.day}}</span>
-          <span>{{p.tags.array().map(tag =>
+          <span>{{t.tags.array().map(tag =>
           tag.name).sort().join(space)}}</span>
-          <span>{{p.label ?? t.description}}</span>
-          <span style="justify-self: end">{{Money.save(context.partValueMap.get(p))}}</span>
+          <span>{{t.label}}</span>
+          <span style="justify-self: end">{{Money.save(t.value)}}</span>
         </div>
       </template>
     </div>
@@ -54,31 +63,32 @@
 
 <script setup>
 import { Collection } from '@mfro/sync-vue';
-import { computed, inject, shallowRef, shallowReactive } from 'vue';
+import { computed, inject, shallowRef, shallowReactive, nextTick } from 'vue';
 
 import { Money } from '@/common';
-
 import AutocompleteField from './AutocompleteField.vue';
 
 const space = ' ';
 
 const context = inject('context');
 
-const parts = computed(() =>
-  context.parts.slice().sort(sort.value.compare)
+const transactions = computed(() =>
+  context.transactions.slice().sort(sort.value.compare)
 );
 
-const mode = shallowRef('view');
-const textField = shallowRef(null);
-const textFieldInput = shallowRef('');
+const selection = shallowReactive([]);
 
-const textFieldMatch = computed(() => {
+const mode = shallowRef('view');
+const editField = shallowRef(null);
+const editFieldInput = shallowRef('');
+
+const editFieldMatch = computed(() => {
   if (mode.value == 'edit') {
-    if (!textFieldInput.value)
+    if (!editFieldInput.value)
       return;
 
     const matches = data.tags.array().map(c => {
-      const index = norm(c.name).indexOf(textFieldInput.value);
+      const index = norm(c.name).indexOf(editFieldInput.value);
       if (index == -1)
         return null;
 
@@ -97,12 +107,10 @@ const textFieldMatch = computed(() => {
   }
 });
 
-const selection = shallowReactive([]);
-
 const transactionGrid = shallowRef(null);
 
 const total = computed(() => {
-  const cents = context.parts.reduce((sum, [t, p]) => sum + context.partValueMap.get(p).cents, 0);
+  const cents = context.transactions.reduce((sum, t) => sum + t.value.cents, 0);
   return { cents };
 });
 
@@ -115,15 +123,15 @@ const sortOptions = [
   {
     label: 'Sort by date',
     compare(a, b) {
-      return -(a[0].date.year - b[0].date.year)
-        || -(a[0].date.month - b[0].date.month)
-        || -(a[0].date.day - b[0].date.day);
+      return -(a.date.year - b.date.year)
+        || -(a.date.month - b.date.month)
+        || -(a.date.day - b.date.day);
     },
   },
   {
     label: 'Sort by value',
     compare(a, b) {
-      return -(context.partValueMap.get(a).cents - context.partValueMap.get(b).cents);
+      return -(a.value.cents - b.value.cents);
     },
   },
 ];
@@ -132,32 +140,40 @@ const sort = shallowRef(sortOptions[0]);
 
 function switchMode(m) {
   mode.value = m;
-  textField.value?.focus();
 
   if (m == 'edit' && selection.length == 0) {
     autoSelect(true);
   }
+
+  nextTick(() => {
+    editField.value?.focus();
+  });
 }
 
 function autoSelect(skip = false, reverse = false) {
   const last = selection[selection.length - 1];
-  const index = context.parts.indexOf(last);
+  const index = transactions.value.indexOf(last);
 
-  const list = reverse
-    ? context.parts.slice(index + 1)
-    : context.parts.slice(0, index == -1 ? context.parts.length : index).reverse();
+  const list = index == -1
+    ? transactions.value.slice()
+    : [
+      ...transactions.value.slice(index + 1),
+      ...transactions.value.slice(0, index),
+    ];
+
+  if (!reverse) list.reverse();
 
   const next = list.find(t => skip && t.tags.array().length == 0) ?? list[0];
 
   selection.length = 0;
   selection.push(
-    ...context.parts
-      .filter(t => t != next && t.array().length == 0 && t.description == next.description),
+    ...list
+      .filter(t => t != next && t.tags.array().length == 0 && t.description == next.description),
     next,
   );
 
   if (transactionGrid.value) {
-    const position = 35 * context.parts.indexOf(next);
+    const position = 35 * transactions.value.indexOf(next);
     const viewport = transactionGrid.value.clientHeight;
 
     transactionGrid.value.scrollTo({
@@ -185,43 +201,42 @@ function onClickTransaction(transaction, e) {
 
     selection.push(transaction);
   }
-
-  textField.value?.focus();
 }
 
-function onKeyDownTextField(e) {
+function onKeyDownEditField(e) {
   if (e.key == 'Enter') {
-    if (textFieldInput.value == '') {
+    if (editFieldInput.value == '') {
       autoSelect(true, e.shiftKey);
     } else if (e.ctrlKey) {
       addTag(createTag());
-      textFieldInput.value = '';
-    } else if (textFieldMatch.value) {
-      addTag(textFieldMatch.value);
-      textFieldInput.value = '';
+      editFieldInput.value = '';
+    } else if (editFieldMatch.value) {
+      addTag(editFieldMatch.value);
+      editFieldInput.value = '';
     }
-  } else if (e.key == 'Tab') {
-    e.preventDefault();
-    autoSelect(false, e.shiftKey);
+  } else if (e.key == 'ArrowUp') {
+    autoSelect(false, false);
+  } else if (e.key == 'ArrowDown') {
+    autoSelect(false, true);
   }
 }
 
 function createTag() {
   return data.tags.insert({
-    name: textFieldInput.value,
+    name: editFieldInput.value,
     tags: Collection.create(),
   });
 }
 
 function addTag(tag) {
-  // const add = !selection[0].tags.array().includes(tag);
-  // for (const transaction of selection) {
-  //   if (add) {
-  //     transaction.tagIds = [...transaction.tagIds, tag.id];
-  //   } else {
-  //     transaction.tagIds = transaction.tagIds.filter(id => id != tag.id);
-  //   }
-  // }
+  const add = !selection[0].tags.array().includes(tag);
+  for (const transaction of selection) {
+    if (add) {
+      transaction.tags.insertRef(tag);
+    } else {
+      transaction.tags.remove(tag.id);
+    }
+  }
 }
 
 function norm(s) {
