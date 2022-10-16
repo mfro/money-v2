@@ -369,10 +369,10 @@
     "@vue/runtime-core" "3"
     "@vue/shared" "3"
 
-"@mfro/vue-ui@^1.0.9":
-  version "1.0.9"
-  resolved "https://npm.pkg.github.com/download/@mfro/vue-ui/1.0.9/1e1926eba585f6b540177974c4d8209e311b5999#1e1926eba585f6b540177974c4d8209e311b5999"
-  integrity sha512-qcTO4zZnuouNmNdHG7VlsUk1AWzcXuujOa6psZUDaz6Pi7isDDKx+nu0/W6ZaYyKZoNW7LzYuQ59jC/3ptZCaw==
+"@mfro/vue-ui@^1.0.10":
+  version "1.0.10"
+  resolved "https://npm.pkg.github.com/download/@mfro/vue-ui/1.0.10/33911a8fd54b80bdff87dbe934edfe1b7573d91a#33911a8fd54b80bdff87dbe934edfe1b7573d91a"
+  integrity sha512-WWhtqQOUT9mCDue6K87beajdm1Mbn/TgaOP+wbkapA2g+HUfgnwrusEaByU5dE2EAJ+f6VJ5HEkvbogwFodSAw==
   dependencies:
     ress "3"
 

@@ -1,43 +1,58 @@
 <template>
-  <v-app class="root">
-    <v-flex class="toolbar px-2 pt-2">
-      <router-link to="/tags"
-                   custom
-                   v-slot="{ isActive, navigate }">
-        <v-button @click="navigate()"
-                  :class="['mx-2', { isActive }]"
-                  :color="isActive ? 'primary' : 'default'">Tags</v-button>
-      </router-link>
+  <v-app row
+         class="root">
+    <v-flex column
+            style="flex: 0 0 18em; overflow: hidden;">
+      <v-flex class="mt-3">
+        <template v-for="route in routes">
+          <v-button icon
+                    @click="navigate(route.path)"
+                    :class="['ml-3', { isActive: $route.path == route.path }]">
+            <v-icon>{{route.icon}}</v-icon>
+          </v-button>
+        </template>
+      </v-flex>
 
-      <router-link to="/transactions"
-                   custom
-                   v-slot="{ isActive, navigate }">
-        <v-button @click="navigate()"
-                  :class="['mx-2', { isActive }]"
-                  :color="isActive ? 'primary' : 'default'">Transactions
-        </v-button>
-      </router-link>
+      <router-view name="sidebar" />
     </v-flex>
 
     <div class="content">
-      <router-view @update:filter="f => updateFilter(f)" />
+      <router-view />
     </div>
   </v-app>
 </template>
 
 <script setup>
-import { useRoute, useRouter } from 'vue-router';
-import { withQuery } from '@/util';
+import { inject, provide } from 'vue';
+import { useRouter } from 'vue-router';
 
-const route = useRoute();
+import { UIContext } from '@/ui/context';
+import { routeQuery } from '@/util';
+
+const data = inject('data');
 const router = useRouter();
 
-function updateFilter(f) {
-  const filter = JSON.stringify(f);
+const context = UIContext.create(data, routeQuery('filter', {}));
+provide('context', context);
 
-  router.replace(withQuery(route, { filter }));
+const routes = [
+  {
+    path: '/tags',
+    icon: 'sell',
+  },
+  {
+    path: '/transactions',
+    icon: 'receipt',
+  },
+]
 
-  localStorage.setItem('mfro:money:filter', filter);
+function navigate(path) {
+  router.push({
+    path,
+    query: {
+      filter: JSON.stringify(context.filter),
+    },
+  });
 }
 </script>
 
@@ -52,14 +67,15 @@ function updateFilter(f) {
 @import "@mfro/vue-ui/src/style.scss";
 
 .root {
+  max-width: 100vw;
   max-height: 100vh;
   overflow: hidden;
+  background-color: white !important;
 }
 
 .content {
-  flex: 0 0 1;
+  flex: 1 1 0;
   overflow: hidden;
-  background-color: white;
   z-index: 1;
 }
 

@@ -1,7 +1,6 @@
 <template>
   <v-flex column
-          class="mr-3"
-          style="flex: 0 0 18em">
+          style="flex: 1 1 0; overflow: hidden;">
 
     <v-text-field :model-value="context.filter.search"
                   @update:model-value="v => context.filter = { ...context.filter, search: v }"

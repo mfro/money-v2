@@ -12,7 +12,7 @@
   "dependencies": {
     "@mfro/assert": "^1.0.0",
     "@mfro/sync-vue": "^1.0.1",
-    "@mfro/vue-ui": "^1.0.9",
+    "@mfro/vue-ui": "^1.0.10",
     "chart.js": "^3.9.1",
     "d3": "^7.6.1",
     "pdfjs-dist": "^2.16.105",

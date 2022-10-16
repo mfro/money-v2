@@ -1,34 +1,33 @@
-import { createRouter, createWebHashHistory, NavigationGuardNext, RouteLocation } from 'vue-router';
+import { createRouter, createWebHashHistory, RouteLocation } from 'vue-router';
 
 import { Filter } from './ui/filter';
 
-import Tags from '@/view/Tags.vue';
-import Transactions from '@/view/Transactions.vue';
-import { withQuery } from './util';
+import Tags_default from '@/view/Tags/default.vue';
+import Tags_sidebar from '@/view/Tags/sidebar.vue';
+import Transactions_default from '@/view/Transactions/default.vue';
+import Transactions_sidebar from '@/view/Transactions/sidebar.vue';
 
-function getFilter(route: RouteLocation) {
-  let str = route.query['filter'];
-  if (typeof str == 'string')
-    return JSON.parse(str);
+// function getFilter(route: RouteLocation) {
+//   const str = route.query['filter']
+//     || localStorage.getItem('mfro:money:filter');
 
-  return Filter.empty();
-}
+//   if (typeof str == 'string') {
+//     return JSON.parse(str);
+//   } else {
+//     return Filter.empty();
+//   }
+// }
 
-const filterMixin = {
-  props(route: RouteLocation) {
-    return {
-      filter: getFilter(route),
-    };
-  },
+// function getSaved(route: RouteLocation, name: string) {
+//   const str = route.query[name]
+//     || localStorage.getItem(`mfro:money:${route.path}:${name}`);
 
-  beforeEnter(to: RouteLocation, from: RouteLocation, next: NavigationGuardNext) {
-    if (from.query['filter'] && !to.query['filter']) {
-      next(withQuery(to, { filter: from.query['filter'] }));
-    } else {
-      next();
-    }
-  },
-};
+//   if (typeof str == 'string') {
+//     return JSON.parse(str);
+//   } else {
+//     return undefined
+//   }
+// }
 
 export const router = createRouter({
   history: createWebHashHistory(),
@@ -36,13 +35,17 @@ export const router = createRouter({
     { path: '/', redirect: '/transactions' },
     {
       path: '/tags',
-      component: Tags,
-      ...filterMixin,
+      components: {
+        default: Tags_default,
+        sidebar: Tags_sidebar,
+      },
     },
     {
       path: '/transactions',
-      component: Transactions,
-      ...filterMixin,
+      components: {
+        default: Transactions_default,
+        sidebar: Transactions_sidebar,
+      },
     },
   ],
 });
