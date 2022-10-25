@@ -1,11 +1,11 @@
 import { Chart, registerables } from 'chart.js';
 import { defineComponent, inject, shallowRef, watchEffect } from 'vue';
 import { assert } from '@mfro/assert';
-import { Tag } from '@/store';
 import { UIContext } from '@/ui/context';
 import { Filter } from './filter';
 
 import './Chart.scss';
+import { Tag } from '@/store';
 import { Money } from '@/common';
 import { useRouter } from 'vue-router';
 

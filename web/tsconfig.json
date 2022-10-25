@@ -19,7 +19,8 @@
     "types": [
       "gapi",
       "gapi.client.drive",
-      "google.accounts"
+      "google.accounts",
+      "plaid-link"
     ],
     "lib": [
       "ES2019",

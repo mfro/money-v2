@@ -1,6 +1,6 @@
-import { Money } from '@/common';
 import { MoneyContext, Tag, Transaction } from '@/store';
-import { computed, reactive, Ref, shallowRef } from 'vue';
+import { Money } from '@/common';
+import { computed, reactive, Ref } from 'vue';
 
 import { Filter } from './filter';
 

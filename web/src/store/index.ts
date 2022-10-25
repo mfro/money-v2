@@ -44,7 +44,7 @@ export async function open() {
   const url = new URL(location.href);
   const idParam = url.searchParams.get('id');
 
-  const { data, id } = await createWebSocketEngine({
+  const { data, id } = await createWebSocketEngine<MoneyContext>({
     host: 'wss://api.mfro.me/sync',
     id: idParam ?? undefined,
   });
@@ -54,5 +54,7 @@ export async function open() {
     window.history.replaceState(null, '', url.toString());
   }
 
-  return init(data as MoneyContext);
+  init(data);
+
+  return { data, id };
 }

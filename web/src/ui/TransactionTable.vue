@@ -20,14 +20,14 @@
       <template v-else>
         <v-flex grow>
           <span>
-            {{ transactions.length}} transactions =
-            {{ Money.save(total)}}
+            {{ transactions.length }} transactions =
+            {{ Money.save(total) }}
           </span>
 
           <span class="ml-6"
                 v-if="selection.length > 0">
-            {{ selection.length}} selected =
-            {{ Money.save(selectionTotal)}}
+            {{ selection.length }} selected =
+            {{ Money.save(selectionTotal) }}
           </span>
         </v-flex>
       </template>
@@ -45,10 +45,12 @@
              :class="{ active: selection.includes(t) }"
              @click="e => onClickTransaction(t, e)">
           <span>{{t.date.year}}-{{t.date.month}}-{{t.date.day}}</span>
-          <span>{{t.tags.array().map(tag =>
-          tag.name).sort().join(space)}}</span>
-          <span>{{t.label}}</span>
-          <span style="justify-self: end">{{Money.save(t.value)}}</span>
+          <!-- <span>{{ t.source.date }}</span> -->
+          <span>{{ t.tags.array().map(tag =>
+              tag.name).sort().join(space)
+          }}</span>
+          <span>{{ t.label }}</span>
+          <span style="justify-self: end">{{ Money.save(t.value) }}</span>
         </div>
       </template>
     </div>
@@ -117,6 +119,7 @@ const sortOptions = [
   {
     label: 'Sort by date',
     compare(a, b) {
+      // return -a.source.date.localeCompare(b.source.date);
       return -(a.date.year - b.date.year)
         || -(a.date.month - b.date.month)
         || -(a.date.day - b.date.day);
@@ -180,7 +183,7 @@ function autoSelect(skip = false, reverse = false) {
 function onClickTransaction(transaction, e) {
   const index = selection.indexOf(transaction);
   if (index != -1) {
-    if (e.shiftKey) {
+    if (e.ctrlKey) {
       selection.splice(index, 1);
     } else if (selection.length > 1) {
       selection.length = 0;
@@ -189,11 +192,20 @@ function onClickTransaction(transaction, e) {
       selection.length = 0;
     }
   } else {
-    if (!e.shiftKey) {
-      selection.length = 0;
-    }
+    if (e.shiftKey && selection.length > 0) {
+      const index1 = transactions.value.indexOf(selection[selection.length - 1]);
+      const index2 = transactions.value.indexOf(transaction);
 
-    selection.push(transaction);
+      const min = Math.min(index1, index2);
+      const max = Math.max(index1, index2);
+
+      selection.push(...transactions.value.slice(min, max + 1).filter(t => !selection.includes(t)));
+    } else if (e.ctrlKey) {
+      selection.push(transaction);
+    } else {
+      selection.length = 0;
+      selection.push(transaction);
+    }
   }
 }
 

@@ -22,10 +22,10 @@
 </template>
 
 <script setup>
-import { routeQuery } from '@/util';
+import { defaultRef, routeQueryRef } from '@/util';
 
 import FilterEditor from '@/ui/Filter/FilterEditor.vue';
 
-const table = routeQuery('table', true);
-const chart = routeQuery('chart', true);
+const table = defaultRef(routeQueryRef('table'), true);
+const chart = defaultRef(routeQueryRef('chart'), true);
 </script>

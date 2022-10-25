@@ -23,17 +23,14 @@
 </template>
 
 <script setup>
-import { inject, provide } from 'vue';
+import { computed, inject, provide } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { UIContext } from '@/ui/context';
-import { routeQuery } from '@/util';
+import { routeQueryRef, localStorageRef } from '@/util';
 
 const data = inject('data');
 const router = useRouter();
-
-const context = UIContext.create(data, routeQuery('filter', {}));
-provide('context', context);
 
 const routes = [
   {
@@ -50,7 +47,23 @@ const routes = [
     path: '/labeling',
     icon: 'edit',
   },
-]
+];
+
+const filterRoute = routeQueryRef('filter');
+const filterStorage = localStorageRef('mfro:money:filter', filterRoute.value ?? {});
+
+const filter = computed( {
+  get() {
+    return filterRoute.value
+      ?? filterStorage.value
+      ?? {};
+  },
+
+  set(v) {
+    filterRoute.value = v;
+    filterStorage.value = v;
+  },
+});
 
 function navigate(info) {
   const route = {
@@ -59,12 +72,15 @@ function navigate(info) {
 
   if (info.filter) {
     route.query = {
-      filter: JSON.stringify(context.filter),
+      filter: JSON.stringify(filter.value),
     };
   }
 
   router.push(route);
 }
+
+const context = UIContext.create(data, filter);
+provide('context', context);
 </script>
 
 <style>

@@ -1,13 +1,12 @@
-import { createApp, h } from 'vue'
+import { createApp, h, watch } from 'vue'
 import { framework } from '@mfro/vue-ui';
 import { assert } from '@mfro/assert';
 
 import App from './view/App.vue';
 import type * as pdfjson from 'pdfjs-dist';
 
-import { importPNC } from './import/pnc';
-import { open, Collection, Transaction, Tag, MoneyContext, makeRef } from './store';
-import { Date, Money } from './common';
+import { open, Collection, makeRef, MoneyContext, Tag, Transaction } from './store';
+import { router } from './routing';
 
 const pdfjs: typeof pdfjson = (window as any).pdfjsLib;
 pdfjs.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
@@ -26,15 +25,24 @@ main();
 // }
 
 import old from './old.json';
-import { router } from './routing';
+import { Date as Date2, Money } from './common';
 
 async function main() {
-  const data = await open();
+  const { data, id } = await open();
 
   Object.assign(window, {
     data,
+    Map,
     Collection,
   });
+
+  // await fetch('http://localhost:8081/initialize', {
+  //   method: 'POST',
+  //   body: JSON.stringify({ id }),
+  //   headers: {
+  //     'content-type': 'application/json',
+  //   },
+  // });
 
   const app = createApp({
     provide: { data },
@@ -48,49 +56,59 @@ async function main() {
 
   app.mount('#app');
 
-  await importPNC(data);
+  // await importPNC(data);
 
-  {
-    for (const account of data.accounts) {
-      const transactions = account.statements.array().flatMap(i => i.transactions.array());
-      const total = transactions.reduce((sum, t) => sum + t.value.cents, 0);
-      console.log(`${account.description}: ${Money.save({ cents: total })}`);
+  // {
+  //   for (const account of data.accounts) {
+  //     const transactions = account.statements.array().flatMap(i => i.transactions.array());
+  //     const total = transactions.reduce((sum, t) => sum + t.value.cents, 0);
+  //     console.log(`${account.description}: ${Money.save({ cents: total })}`);
 
-      const duplicates = transactions.filter(t => transactions.some(f => t != f && t.description == f.description && Date.eq(t.date, f.date) && t.value.cents == f.value.cents));
-      if (duplicates.length > 0) {
-        console.warn('duplicates', duplicates);
+  //     const duplicates = transactions.filter(t => transactions.some(f => t != f && t.description == f.description && Date.eq(t.date, f.date) && t.value.cents == f.value.cents));
+  //     if (duplicates.length > 0) {
+  //       console.warn('duplicates', duplicates);
+  //     }
+  //   }
+
+  for (const account of data.accounts) {
+    const mAccount = array(old.state.accounts).find(a => a.description == account.description);
+    assert(mAccount != null, 'x');
+
+    const transactions = account.statements.array().flatMap(i => i.transactions.array());
+
+    for (const t of transactions) {
+      let mTransaction = array(old.state.transactions).filter(f => t.description == f.description && Date2.eq(t.date, f.date) && Money.eq(t.value, f.value));
+      // if (mTransaction.length == 0) {
+      //   mTransaction = array(old.state.transactions).filter(f => Date2.eq(t.date, f.date) && Money.eq(t.value, f.value));
+      // }
+
+      let transaction = data.transactions.array().find(x => x.source.type == 'pnc' && x.source.source == t);
+      if (!transaction) {
+        transaction = data.transactions.insert({
+          source: { type: 'pnc', source: makeRef(t) },
+          date: { ...t.date },
+          value: { ...t.value },
+          label: t.description,
+          tags: Collection.create(),
+        });
+      }
+
+      assert(mTransaction.length > 0, 'x');
+      assert(mTransaction.every(t => JSON.stringify(t.tagIds) == JSON.stringify(mTransaction[0].tagIds)), 'x');
+
+      for (const id of mTransaction[0].tagIds) {
+        const src = (old.state.tags as any)[id];
+        addTag(data, transaction, src);
       }
     }
-
-    // for (const account of data.accounts) {
-    //   const mAccount = array(old.state.accounts).find(a => a.description == account.description);
-    //   assert(mAccount != null, 'x');
-
-    //   const transactions = account.statements.array().flatMap(i => i.transactions.array());
-
-    //   for (const t of transactions) {
-    //     const existing = data.transactions.array().find(x => x.source.type == 'pnc' && x.source.source == t);
-    //     if (existing) continue;
-
-    //     const mTransaction = array(old.state.transactions).filter(f => t.description == f.description && Date.eq(t.date, f.date) && t.value.cents == f.value.cents);
-    //     assert(mTransaction.length > 0, 'x');
-    //     assert(mTransaction.every(t => JSON.stringify(t.tagIds) == JSON.stringify(mTransaction[0].tagIds)), 'x');
-
-    //     const transaction = data.transactions.insert({
-    //       date: { ...t.date },
-    //       label: t.description,
-    //       source: { type: 'pnc', source: makeRef(t) },
-    //       tags: Collection.create(),
-    //       value: { ...t.value },
-    //     });
-
-    //     for (const id of mTransaction[0].tagIds) {
-    //       const src = (old.state.tags as any)[id];
-    //       addTag(data, transaction, src);
-    //     }
-    //   }
+    // } else {
+    //   const mTransaction = array(old.state.transactions).filter(f => Date2.eq(date, f.date) && -t.amount * 100 == f.value.cents);
+    //   console.log(t.date, t.name, t, mTransaction);
     // }
   }
+
+  console.log('done');
+  // }
 }
 
 function addTag(data: MoneyContext, t: Tag | Transaction, src: typeof old.state.tags[2]) {
@@ -107,7 +125,7 @@ function addTag(data: MoneyContext, t: Tag | Transaction, src: typeof old.state.
     }
   }
 
-  t.tags.insert(tag);
+  t.tags.insertRef(tag);
 }
 
 function array<T>(o: { nextId: number, '0': T }): T[] {
